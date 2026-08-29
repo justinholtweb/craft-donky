@@ -1,0 +1,60 @@
+{
+    "name": "justinholtweb/craft-donky",
+    "description": "The document suite for Craft Commerce — template-driven invoices, packing slips, pick lists and credit notes, with sequential invoice numbers, bulk printing and per-status attachment rules.",
+    "version": "5.0.0",
+    "type": "craft-plugin",
+    "keywords": [
+        "craftcms",
+        "craft-plugin",
+        "craft-commerce",
+        "commerce",
+        "pdf",
+        "invoice",
+        "packing-slip",
+        "credit-note",
+        "pick-list",
+        "documents"
+    ],
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Justin Holt",
+            "homepage": "https://justinholt.com"
+        }
+    ],
+    "support": {
+        "email": "justin@justinholt.com"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.2",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "craftcms/cms": "^5.3.0",
+        "craftcms/commerce": "^5.0.0"
+    },
+    "suggest": {
+        "dompdf/dompdf": "Renders documents to PDF. Craft Commerce already requires it, so this is only relevant if that ever changes."
+    },
+    "autoload": {
+        "psr-4": {
+            "justinholtweb\\donky\\": "src/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "craftcms/plugin-installer": true,
+            "yiisoft/yii2-composer": true
+        }
+    },
+    "extra": {
+        "name": "Donky",
+        "handle": "donky",
+        "developer": "Justin Holt",
+        "developerUrl": "https://justinholt.com",
+        "documentationUrl": "https://github.com/justinholtweb/craft-donky/blob/main/README.md",
+        "changelogUrl": "https://raw.githubusercontent.com/justinholtweb/craft-donky/main/CHANGELOG.md",
+        "class": "justinholtweb\\donky\\Plugin"
+    }
+}

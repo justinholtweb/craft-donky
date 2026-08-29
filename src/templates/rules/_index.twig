@@ -1,0 +1,82 @@
+{% extends "_layouts/cp" %}
+
+{% set title = "Attachment rules"|t('donky') %}
+{% set selectedSubnavItem = 'rules' %}
+
+{% block actionButton %}
+    {% if canAdd %}
+        <a href="{{ url('donky/rules/new') }}" class="btn submit add icon">{{ "New rule"|t('donky') }}</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <p class="light">
+        {{ "A rule says which document rides along with which email. Rules are matched when the email is sent rather than when the status changes, because an order can reach a status from the control panel, a webhook, a console command or a bulk edit — and only the email is a moment the customer sees."|t('donky') }}
+    </p>
+
+    {% if not attachEnabled %}
+        <p class="warning">{{ "Attaching documents to emails is switched off in the settings, so none of these rules are running."|t('donky') }}</p>
+    {% endif %}
+
+    {% if not isPro %}
+        <p class="light">{{ "Donky Lite runs the first enabled rule and ignores its status and condition. Pro runs every rule, matched by order status and by an order condition."|t('donky') }}</p>
+    {% endif %}
+
+    {% if rules|length %}
+        <table class="data fullwidth collapsible">
+            <thead>
+                <tr>
+                    <th scope="col">{{ "Rule"|t('donky') }}</th>
+                    <th scope="col">{{ "Attaches"|t('donky') }}</th>
+                    <th scope="col">{{ "To email"|t('donky') }}</th>
+                    <th scope="col">{{ "On status"|t('donky') }}</th>
+                    <th scope="col">{{ "Status"|t('donky') }}</th>
+                    <th scope="col" class="thin"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in rules %}
+                    <tr data-id="{{ rule.id }}" data-name="{{ rule.name }}">
+                        <th scope="row"><a href="{{ rule.cpEditUrl }}">{{ rule.name }}</a></th>
+                        <td>{{ rule.type.name ?? "(deleted type)"|t('donky') }}</td>
+                        <td>{{ rule.emailLabel }}</td>
+                        <td>{{ isPro ? rule.statusLabel : "Any status"|t('donky') }}</td>
+                        <td>
+                            {% if rule.enabled and rule.id in activeIds %}
+                                <span class="status green"></span> {{ "Running"|t('donky') }}
+                            {% elseif rule.enabled %}
+                                <span class="status orange"></span> {{ "Needs Pro"|t('donky') }}
+                            {% else %}
+                                <span class="status disabled"></span> {{ "Disabled"|t('donky') }}
+                            {% endif %}
+                        </td>
+                        <td class="thin">
+                            <button class="delete icon donky-delete" type="button" title="{{ 'Delete'|t('donky') }}"></button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="zilch">
+            <p>{{ "No attachment rules yet."|t('donky') }}</p>
+            <p class="light">{{ "Until one exists, Commerce's emails go out exactly as they do now."|t('donky') }}</p>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% js %}
+    $('.donky-delete').on('click', function() {
+        var $row = $(this).closest('tr');
+
+        if (!confirm(Craft.t('donky', 'Delete “{name}”? Documents it has already attached are unaffected.', { name: $row.data('name') }))) {
+            return;
+        }
+
+        Craft.sendActionRequest('POST', 'donky/rules/delete', { data: { id: $row.data('id') } })
+            .then(function() { $row.remove(); })
+            .catch(function(e) {
+                Craft.cp.displayError(e.response && e.response.data ? e.response.data.message : null);
+            });
+    });
+{% endjs %}

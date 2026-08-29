@@ -1,0 +1,89 @@
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+{% set title = "Documents"|t('donky') %}
+{% set selectedSubnavItem = 'documents' %}
+
+{% block actionButton %}
+    <a class="btn" href="{{ url('donky/documents/export', criteria|filter(v => v is not null)) }}">{{ "Export CSV"|t('donky') }}</a>
+{% endblock %}
+
+{% block content %}
+    <form method="get" action="{{ url('donky/documents') }}" class="flex" style="margin-bottom:14px; align-items:flex-end;">
+        {{ forms.select({
+            name: 'typeId',
+            options: [{ value: '', label: "Every type"|t('donky') }]|merge(types|map(t => { value: t.id, label: t.name })|values),
+            value: criteria.typeId
+        }) }}
+        {{ forms.select({
+            name: 'kind',
+            options: [{ value: '', label: "Every kind"|t('donky') }]|merge(kinds|map((label, value) => { value: value, label: label })|values),
+            value: criteria.kind
+        }) }}
+        {{ forms.select({
+            name: 'status',
+            options: [{ value: '', label: "Any status"|t('donky') }]|merge(statuses|map((label, value) => { value: value, label: label })|values),
+            value: criteria.status
+        }) }}
+        {{ forms.text({ name: 'search', value: criteria.search, placeholder: "Number"|t('donky') }) }}
+        <button type="submit" class="btn">{{ "Filter"|t('donky') }}</button>
+    </form>
+
+    {% if documents|length %}
+        <table class="data fullwidth collapsible">
+            <thead>
+                <tr>
+                    <th scope="col">{{ "Number"|t('donky') }}</th>
+                    <th scope="col">{{ "Type"|t('donky') }}</th>
+                    <th scope="col">{{ "Order"|t('donky') }}</th>
+                    <th scope="col">{{ "Issued"|t('donky') }}</th>
+                    <th scope="col">{{ "Total"|t('donky') }}</th>
+                    <th scope="col">{{ "Status"|t('donky') }}</th>
+                    <th scope="col" class="thin"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for document in documents %}
+                    {% set order = document.order %}
+                    <tr>
+                        <th scope="row">
+                            <a href="{{ document.cpUrl }}">{{ document.formattedNumber ?: "(unnumbered)"|t('donky') }}</a>
+                        </th>
+                        <td>{{ document.type.name ?? document.kindLabel }}</td>
+                        <td>
+                            {% if order %}
+                                <a href="{{ order.cpEditUrl }}">{{ order.reference ?: order.shortNumber }}</a>
+                            {% else %}
+                                <span class="light">{{ document.orderIds|length ? "{n} orders"|t('donky', { n: document.orderIds|length }) : "—" }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ document.dateIssued ? document.dateIssued|datetime('short') : '' }}</td>
+                        <td>{{ document.currency ? document.money(document.total) : document.total }}</td>
+                        <td>
+                            <span class="status {{ document.isVoid ? 'disabled' : 'green' }}"></span>
+                            {{ document.statusLabel }}
+                        </td>
+                        <td class="thin">
+                            <a class="btn small" href="{{ document.downloadUrl }}">{{ "PDF"|t('donky') }}</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if pageCount > 1 %}
+            <div class="flex" style="margin-top:14px;">
+                {% for p in 1..pageCount %}
+                    <a class="btn{{ p == page ? ' active' : '' }}" href="{{ url('donky/documents', criteria|filter(v => v is not null)|merge({ page: p })) }}">{{ p }}</a>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <p class="light" style="margin-top:10px;">{{ "{total} documents"|t('donky', { total: total }) }}</p>
+    {% else %}
+        <div class="zilch">
+            <p>{{ "No documents yet."|t('donky') }}</p>
+            <p class="light">{{ "Documents are issued from an order, from an attachment rule, from a bulk print, or from the console."|t('donky') }}</p>
+        </div>
+    {% endif %}
+{% endblock %}

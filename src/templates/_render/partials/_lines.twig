@@ -1,0 +1,46 @@
+{# The line items. `showPrices` is false on a packing slip: quoting prices on the paperwork inside
+   a parcel is the classic gift and customs complaint. #}
+{% set showPrices = showPrices ?? true %}
+{% set showSku = design.blocks.showSku ?? true %}
+{% set showOptions = design.blocks.showOptions ?? true %}
+{% set showTax = showPrices and (design.blocks.showTaxColumn ?? true) %}
+{% set lines = snapshot.lineItems ?? [] %}
+
+<table class="dk-lines">
+    <thead>
+        <tr>
+            <th>{{ "Description"|t('donky') }}</th>
+            {% if showSku %}<th>{{ "SKU"|t('donky') }}</th>{% endif %}
+            <th class="dk-qty">{{ "Qty"|t('donky') }}</th>
+            {% if showPrices %}
+                <th class="dk-num">{{ "Unit"|t('donky') }}</th>
+                {% if showTax %}<th class="dk-num">{{ "Tax"|t('donky') }}</th>{% endif %}
+                <th class="dk-num">{{ "Amount"|t('donky') }}</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for line in lines %}
+            <tr>
+                <td>
+                    {{ line.description ?? '' }}
+                    {% if showOptions and line.options ?? {} %}
+                        <div class="dk-opts">
+                            {% for label, value in line.options %}{{ label }}: {{ value }}{% if not loop.last %} · {% endif %}{% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if line.note ?? '' %}<div class="dk-opts">{{ line.note }}</div>{% endif %}
+                </td>
+                {% if showSku %}<td class="dk-sku">{{ line.sku ?? '' }}</td>{% endif %}
+                <td class="dk-qty">{{ line.qty ?? 0 }}</td>
+                {% if showPrices %}
+                    <td class="dk-num">{{ document.money(line.salePrice ?? line.price ?? 0) }}</td>
+                    {% if showTax %}<td class="dk-num">{{ document.money(line.tax ?? 0) }}</td>{% endif %}
+                    <td class="dk-num">{{ document.money(line.total ?? 0) }}</td>
+                {% endif %}
+            </tr>
+        {% else %}
+            <tr><td colspan="6" class="muted">{{ "This order has no line items."|t('donky') }}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>

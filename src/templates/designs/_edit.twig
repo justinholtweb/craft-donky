@@ -1,0 +1,199 @@
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+{% set selectedSubnavItem = 'designs' %}
+{% set crumbs = [
+    { label: "Donky"|t('donky'), url: url('donky') },
+    { label: "Designer"|t('donky'), url: url('donky/designs') }
+] %}
+{% set fullPageForm = true %}
+
+{% block actionButton %}
+    {% if design.id %}
+        <a class="btn" href="{{ url('donky/designs/preview', { designId: design.id }) }}" target="_blank" rel="noopener">{{ "Preview"|t('donky') }}</a>
+    {% endif %}
+    <button type="submit" class="btn submit">{{ "Save"|t('donky') }}</button>
+{% endblock %}
+
+{% block content %}
+    <input type="hidden" name="action" value="donky/designs/save">
+    {{ redirectInput('donky/designs') }}
+    {% if design.id %}<input type="hidden" name="id" value="{{ design.id }}">{% endif %}
+
+    {{ forms.textField({
+        first: true,
+        label: "Name"|t('donky'),
+        id: 'name',
+        name: 'name',
+        value: design.name,
+        required: true,
+        errors: design.getErrors('name')
+    }) }}
+
+    {{ forms.textField({
+        label: "Handle"|t('donky'),
+        id: 'handle',
+        name: 'handle',
+        value: design.handle,
+        class: 'code',
+        required: true,
+        errors: design.getErrors('handle')
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: "Default design"|t('donky'),
+        instructions: "Used by any document type that has not been given one of its own. There is always exactly one."|t('donky'),
+        id: 'isDefault',
+        name: 'isDefault',
+        on: design.isDefault
+    }) }}
+
+    <hr>
+    <h2>{{ "Page"|t('donky') }}</h2>
+
+    {{ forms.selectField({
+        label: "Paper"|t('donky'),
+        id: 'paperSize',
+        name: 'paperSize',
+        options: paperOptions,
+        value: design.paperSize
+    }) }}
+
+    {{ forms.selectField({
+        label: "Orientation"|t('donky'),
+        id: 'paperOrientation',
+        name: 'paperOrientation',
+        options: orientationOptions,
+        value: design.paperOrientation
+    }) }}
+
+    {{ forms.field({
+        label: "Margins"|t('donky'),
+        instructions: "Millimetres."|t('donky'),
+        errors: design.getErrors('margins')
+    }, forms.textField({ label: "Top"|t('donky'), type: 'number', name: 'margins[top]', value: design.margins.top, size: 4 })
+     ~ forms.textField({ label: "Right"|t('donky'), type: 'number', name: 'margins[right]', value: design.margins.right, size: 4 })
+     ~ forms.textField({ label: "Bottom"|t('donky'), type: 'number', name: 'margins[bottom]', value: design.margins.bottom, size: 4 })
+     ~ forms.textField({ label: "Left"|t('donky'), type: 'number', name: 'margins[left]', value: design.margins.left, size: 4 })) }}
+
+    <hr>
+    <h2>{{ "Type and colour"|t('donky') }}</h2>
+
+    {{ forms.selectField({
+        label: "Font"|t('donky'),
+        instructions: "Only the faces the PDF engine ships with, so nothing has to be downloaded at render time."|t('donky'),
+        id: 'typographyFamily',
+        name: 'typography[family]',
+        options: fontOptions,
+        value: design.typography.family
+    }) }}
+
+    {{ forms.textField({
+        type: 'number',
+        label: "Base size"|t('donky'),
+        instructions: "Points."|t('donky'),
+        name: 'typography[size]',
+        value: design.typography.size,
+        size: 4
+    }) }}
+
+    {{ forms.field({
+        label: "Colours"|t('donky'),
+        errors: design.getErrors('colors')
+    }, forms.colorField({ label: "Accent"|t('donky'), name: 'colors[accent]', value: design.getColor('accent') })
+     ~ forms.colorField({ label: "Text"|t('donky'), name: 'colors[text]', value: design.getColor('text') })
+     ~ forms.colorField({ label: "Muted"|t('donky'), name: 'colors[muted]', value: design.getColor('muted') })
+     ~ forms.colorField({ label: "Rules"|t('donky'), name: 'colors[rule]', value: design.getColor('rule') })
+     ~ forms.colorField({ label: "Table head"|t('donky'), name: 'colors[tableHead]', value: design.getColor('tableHead') })) }}
+
+    {{ forms.elementSelectField({
+        label: "Logo"|t('donky'),
+        instructions: "A local volume gives the renderer a file path, which always works. A remote one needs “allow remote images” switched on."|t('donky'),
+        id: 'logoAssetId',
+        name: 'logoAssetId',
+        elementType: 'craft\\elements\\Asset',
+        elements: design.logo ? [design.logo] : [],
+        criteria: { kind: ['image'] },
+        limit: 1,
+        errors: design.getErrors('logoAssetId')
+    }) }}
+
+    {{ forms.textField({
+        type: 'number',
+        label: "Logo height"|t('donky'),
+        instructions: "Millimetres. The width follows the aspect ratio."|t('donky'),
+        id: 'logoHeight',
+        name: 'logoHeight',
+        value: design.logoHeight,
+        size: 4,
+        errors: design.getErrors('logoHeight')
+    }) }}
+
+    <hr>
+    <h2>{{ "Issuer"|t('donky') }}</h2>
+    <p class="light">{{ "Who the documents are from. This is the block that has to be right for an invoice to be worth anything."|t('donky') }}</p>
+
+    {{ forms.textField({ label: "Business name"|t('donky'), name: 'seller[name]', value: design.seller.name }) }}
+    {{ forms.textareaField({ label: "Address"|t('donky'), name: 'seller[address]', value: design.seller.address, rows: 4 }) }}
+    {{ forms.textField({ label: "Tax ID"|t('donky'), name: 'seller[taxId]', value: design.seller.taxId }) }}
+    {{ forms.textField({ label: "Registration"|t('donky'), instructions: "Company number, chamber of commerce number, whatever your jurisdiction wants on the paperwork."|t('donky'), name: 'seller[registration]', value: design.seller.registration }) }}
+    {{ forms.textField({ label: "Email"|t('donky'), name: 'seller[email]', value: design.seller.email }) }}
+    {{ forms.textField({ label: "Phone"|t('donky'), name: 'seller[phone]', value: design.seller.phone }) }}
+    {{ forms.textField({ label: "Website"|t('donky'), name: 'seller[website]', value: design.seller.website }) }}
+
+    <hr>
+    <h2>{{ "Blocks"|t('donky') }}</h2>
+
+    {% for key, label in {
+        showSku: "SKU column"|t('donky'),
+        showOptions: "Line item options"|t('donky'),
+        showTaxColumn: "Tax column"|t('donky'),
+        showBillingAddress: "Billing address"|t('donky'),
+        showShippingAddress: "Shipping address"|t('donky'),
+        showPaymentMethod: "Payment details"|t('donky'),
+        showCustomerNote: "Order note"|t('donky'),
+        showTotalsBreakdown: "Totals breakdown"|t('donky'),
+        showPaidStamp: "“Paid” stamp"|t('donky'),
+        showDueDate: "Due date"|t('donky'),
+        showPageNumbers: "Page numbers"|t('donky')
+    } %}
+        {{ forms.lightswitchField({
+            label: label,
+            name: 'blocks[' ~ key ~ ']',
+            on: design.blocks[key] ?? true
+        }) }}
+    {% endfor %}
+
+    {{ forms.textareaField({
+        label: "Header note"|t('donky'),
+        instructions: "Printed under the masthead on every document."|t('donky'),
+        name: 'blocks[headerNote]',
+        value: design.blocks.headerNote,
+        rows: 2
+    }) }}
+
+    {{ forms.textareaField({
+        label: "Terms"|t('donky'),
+        instructions: "Payment terms, returns policy, the small print."|t('donky'),
+        name: 'blocks[terms]',
+        value: design.blocks.terms,
+        rows: 4
+    }) }}
+
+    {{ forms.textareaField({
+        label: "Footer"|t('donky'),
+        instructions: "Fixed to the bottom of every page."|t('donky'),
+        name: 'blocks[footer]',
+        value: design.blocks.footer,
+        rows: 2
+    }) }}
+
+    {{ forms.textareaField({
+        label: "Custom CSS"|t('donky'),
+        instructions: "Appended to the generated stylesheet. The renderer supports CSS 2.1 and a little of CSS 3 — tables and floats, not flexbox or grid."|t('donky'),
+        name: 'customCss',
+        value: design.customCss,
+        rows: 8,
+        class: 'code'
+    }) }}
+{% endblock %}

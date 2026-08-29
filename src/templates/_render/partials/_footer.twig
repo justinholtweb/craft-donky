@@ -1,0 +1,43 @@
+{# Payment details, terms, and the fixed footer. #}
+{% set showPayment = design.blocks.showPaymentMethod ?? true %}
+{% set payments = snapshot.payments ?? [] %}
+
+{% if showPayment and payments %}
+    <div class="dk-notes">
+        <div class="dk-label">{{ "Payment"|t('donky') }}</div>
+        {% for payment in payments %}
+            <div>
+                {{ payment.type == 'refund' ? "Refunded"|t('donky') : "Paid"|t('donky') }}
+                {{ document.money(payment.amount ?? 0) }}
+                {% if payment.gateway ?? null %}· {{ payment.gateway }}{% endif %}
+                {% if payment.date ?? null %}· {{ payment.date|date('medium') }}{% endif %}
+                {% if payment.reference ?? null %}<span class="muted">· {{ payment.reference }}</span>{% endif %}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% if (design.blocks.showCustomerNote ?? true) and (snapshot.order.note ?? '') %}
+    <div class="dk-notes">
+        <div class="dk-label">{{ "Note"|t('donky') }}</div>
+        <div>{{ snapshot.order.note }}</div>
+    </div>
+{% endif %}
+
+{% if document.notes %}
+    <div class="dk-notes">
+        <div class="dk-label">{{ "Notes"|t('donky') }}</div>
+        <div>{{ document.notes|nl2br }}</div>
+    </div>
+{% endif %}
+
+{% if design.blocks.terms ?? '' %}
+    <div class="dk-terms">{{ design.blocks.terms|nl2br }}</div>
+{% endif %}
+
+{% if design.blocks.footer ?? '' %}
+    <div class="dk-footer">
+        {{ design.blocks.footer }}
+        {% if design.blocks.showPageNumbers ?? true %} · {{ "Page"|t('donky') }} <span class="dk-pageno"></span>{% endif %}
+    </div>
+{% endif %}

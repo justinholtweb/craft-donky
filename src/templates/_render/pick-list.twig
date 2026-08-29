@@ -1,0 +1,80 @@
+{#
+    The bundled pick list: one row per thing to fetch, across every selected order.
+
+    Variables: document, type, design, snapshot, settings.
+    `snapshot.rows` is already collapsed and sorted by SKU; `snapshot.orders` is what it covers.
+#}
+{% set heading = type.name ?? "Pick list"|t('donky') %}
+{% set summary = snapshot.summary ?? {} %}
+
+<div class="dk-doc">
+    {% include 'donky/_render/partials/_header' %}
+
+    <p class="muted">
+        {{ "{units} units · {rows} lines · {orders} orders"|t('donky', {
+            units: summary.unitCount ?? 0,
+            rows: summary.rowCount ?? 0,
+            orders: summary.orderCount ?? 0
+        }) }}
+    </p>
+
+    <table class="dk-lines">
+        <thead>
+            <tr>
+                <th style="width:9%;">{{ "Picked"|t('donky') }}</th>
+                <th class="dk-qty">{{ "Qty"|t('donky') }}</th>
+                <th>{{ "SKU"|t('donky') }}</th>
+                <th>{{ "Item"|t('donky') }}</th>
+                <th>{{ "Orders"|t('donky') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in snapshot.rows ?? [] %}
+                <tr>
+                    <td>☐</td>
+                    <td class="dk-qty"><strong>{{ row.quantity ?? 0 }}</strong></td>
+                    <td class="dk-sku">{{ row.sku ?? '' }}</td>
+                    <td>
+                        {{ row.description ?? '' }}
+                        {% if row.options ?? {} %}
+                            <div class="dk-opts">
+                                {% for label, value in row.options %}{{ label }}: {{ value }}{% if not loop.last %} · {% endif %}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="dk-opts">{{ (row.orders ?? [])|join(', ') }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="muted">{{ "Nothing to pick."|t('donky') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="dk-notes">
+        <div class="dk-label">{{ "Orders covered"|t('donky') }}</div>
+        <table class="dk-lines">
+            <thead>
+                <tr>
+                    <th>{{ "Order"|t('donky') }}</th>
+                    <th>{{ "Customer"|t('donky') }}</th>
+                    <th>{{ "Status"|t('donky') }}</th>
+                    <th class="dk-qty">{{ "Lines"|t('donky') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for covered in snapshot.orders ?? [] %}
+                    <tr>
+                        <td>{{ covered.reference ?? covered.shortNumber ?? '' }}</td>
+                        <td>{{ covered.name ?? '' }}</td>
+                        <td>{{ covered.status ?? '' }}</td>
+                        <td class="dk-qty">{{ covered.items ?? 0 }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if design.blocks.footer ?? '' %}
+        <div class="dk-footer">{{ design.blocks.footer }}</div>
+    {% endif %}
+</div>

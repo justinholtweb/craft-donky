@@ -1,0 +1,71 @@
+{% extends "_layouts/cp" %}
+
+{% set title = "Designer"|t('donky') %}
+{% set selectedSubnavItem = 'designs' %}
+
+{% block actionButton %}
+    {% if canAdd %}
+        <a href="{{ url('donky/designs/new') }}" class="btn submit add icon">{{ "New design"|t('donky') }}</a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    <p class="light">
+        {{ "A design is everything about how a document looks — paper, margins, type, colours, logo, the issuer block and which parts get drawn. The templates read it, so restyling the whole suite never means touching Twig."|t('donky') }}
+    </p>
+
+    {% if not isPro %}
+        <p class="light">{{ "Donky Lite has one design. Pro adds as many as you like, so a second brand or a second store can look like itself."|t('donky') }}</p>
+    {% endif %}
+
+    <table class="data fullwidth collapsible">
+        <thead>
+            <tr>
+                <th scope="col">{{ "Name"|t('donky') }}</th>
+                <th scope="col">{{ "Colours"|t('donky') }}</th>
+                <th scope="col">{{ "Paper"|t('donky') }}</th>
+                <th scope="col">{{ "Issuer"|t('donky') }}</th>
+                <th scope="col" class="thin"></th>
+                <th scope="col" class="thin"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for design in designs %}
+                <tr data-id="{{ design.id }}" data-name="{{ design.name }}">
+                    <th scope="row">
+                        <a href="{{ design.cpEditUrl }}">{{ design.name }}</a>
+                        {% if design.isDefault %}<span class="light">— {{ "default"|t('donky') }}</span>{% endif %}
+                        <span class="light code">{{ design.handle }}</span>
+                    </th>
+                    <td>{{ design.swatchHtml|raw }}</td>
+                    <td>{{ design.paperSize|upper }} · {{ design.paperOrientation }}</td>
+                    <td>{{ design.seller.name ?? '' ?: '—' }}</td>
+                    <td class="thin">
+                        <a class="btn small" href="{{ url('donky/designs/preview', { designId: design.id }) }}" target="_blank" rel="noopener">{{ "Preview"|t('donky') }}</a>
+                    </td>
+                    <td class="thin">
+                        {% if not design.isDefault %}
+                            <button class="delete icon donky-delete" type="button" title="{{ 'Delete'|t('donky') }}"></button>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+{% js %}
+    $('.donky-delete').on('click', function() {
+        var $row = $(this).closest('tr');
+
+        if (!confirm(Craft.t('donky', 'Delete “{name}”? Document types using it fall back to the default design.', { name: $row.data('name') }))) {
+            return;
+        }
+
+        Craft.sendActionRequest('POST', 'donky/designs/delete', { data: { id: $row.data('id') } })
+            .then(function() { $row.remove(); })
+            .catch(function(e) {
+                Craft.cp.displayError(e.response && e.response.data ? e.response.data.message : null);
+            });
+    });
+{% endjs %}

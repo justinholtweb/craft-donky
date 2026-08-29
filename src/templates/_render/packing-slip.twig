@@ -1,0 +1,27 @@
+{#
+    The bundled packing slip. No prices — this goes in the box.
+
+    Variables: document, type, design, order, orders, snapshot, settings.
+#}
+{% set heading = type.name ?? "Packing slip"|t('donky') %}
+
+<div class="dk-doc">
+    {% include 'donky/_render/partials/_header' %}
+    {% include 'donky/_render/partials/_addresses' %}
+    {% include 'donky/_render/partials/_lines' with { showPrices: false } %}
+
+    {% if snapshot.order.note ?? '' %}
+        <div class="dk-notes dk-box">
+            <div class="dk-label">{{ "Order note"|t('donky') }}</div>
+            <div>{{ snapshot.order.note }}</div>
+        </div>
+    {% endif %}
+
+    {% if document.notes %}
+        <div class="dk-notes">{{ document.notes|nl2br }}</div>
+    {% endif %}
+
+    {% if design.blocks.footer ?? '' %}
+        <div class="dk-footer">{{ design.blocks.footer }}</div>
+    {% endif %}
+</div>

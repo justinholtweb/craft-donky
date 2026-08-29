@@ -1,0 +1,64 @@
+{# The masthead: who is sending this, what it is, and what it is called. #}
+{% set seller = design.seller %}
+{% set logoSrc = design.logoSrc %}
+
+<table class="dk-head">
+    <tr>
+        <td>
+            {% if logoSrc %}
+                <img class="dk-logo" src="{{ logoSrc }}" alt="{{ seller.name ?? '' }}">
+            {% elseif seller.name ?? '' %}
+                <h2>{{ seller.name }}</h2>
+            {% endif %}
+
+            <div class="muted" style="margin-top:4pt;">
+                {% if logoSrc and seller.name ?? '' %}{{ seller.name }}<br>{% endif %}
+                {% for line in design.sellerLines %}{{ line }}<br>{% endfor %}
+                {% if seller.taxId ?? '' %}{{ "Tax ID"|t('donky') }}: {{ seller.taxId }}<br>{% endif %}
+                {% if seller.registration ?? '' %}{{ seller.registration }}<br>{% endif %}
+                {% if seller.email ?? '' %}{{ seller.email }}{% endif %}
+                {% if seller.phone ?? '' %} · {{ seller.phone }}{% endif %}
+            </div>
+        </td>
+        <td class="dk-meta">
+            <h1>{{ heading }}</h1>
+
+            <table style="margin-left:auto; text-align:right;">
+                {% if document.formattedNumber %}
+                    <tr>
+                        <td class="muted" style="padding-right:8pt;">{{ "Number"|t('donky') }}</td>
+                        <td><strong>{{ document.formattedNumber }}</strong></td>
+                    </tr>
+                {% endif %}
+                <tr>
+                    <td class="muted" style="padding-right:8pt;">{{ "Issued"|t('donky') }}</td>
+                    <td>{{ document.dateIssued ? document.dateIssued|date('medium') : '' }}</td>
+                </tr>
+                {% if document.dateDue and design.blocks.showDueDate ?? true %}
+                    <tr>
+                        <td class="muted" style="padding-right:8pt;">{{ "Due"|t('donky') }}</td>
+                        <td>{{ document.dateDue|date('medium') }}</td>
+                    </tr>
+                {% endif %}
+                {% if snapshot.order is defined %}
+                    <tr>
+                        <td class="muted" style="padding-right:8pt;">{{ "Order"|t('donky') }}</td>
+                        <td>{{ snapshot.order.reference ?? snapshot.order.shortNumber ?? '' }}</td>
+                    </tr>
+                    {% if snapshot.order.dateOrdered ?? null %}
+                        <tr>
+                            <td class="muted" style="padding-right:8pt;">{{ "Ordered"|t('donky') }}</td>
+                            <td>{{ snapshot.order.dateOrdered|date('medium') }}</td>
+                        </tr>
+                    {% endif %}
+                {% endif %}
+            </table>
+        </td>
+    </tr>
+</table>
+
+{% if design.blocks.headerNote ?? '' %}
+    <p class="muted">{{ design.blocks.headerNote }}</p>
+{% endif %}
+
+<hr class="dk-rule">

@@ -1,0 +1,86 @@
+{% extends "_layouts/cp" %}
+
+{% set title = "Document types"|t('donky') %}
+{% set selectedSubnavItem = 'types' %}
+
+{% block actionButton %}
+    <a href="{{ url('donky/types/new') }}" class="btn submit add icon">{{ "New document type"|t('donky') }}</a>
+{% endblock %}
+
+{% block content %}
+    {% if not isPro %}
+        <p class="light">
+            {{ "Donky Lite runs one invoice and one packing slip. Pro adds credit notes, pick lists, proforma invoices, extra types of any kind, several designs, bulk printing and attachment rules matched by order status."|t('donky') }}
+        </p>
+    {% endif %}
+
+    {% if abacus %}
+        <p class="light">
+            {{ "Abacus is installed, so the order reference is a real sequential order number. A document type can carry it instead of counting on its own — set its number source to “The order reference” and the invoice number matches the order number."|t('donky') }}
+        </p>
+    {% endif %}
+
+    {% for group in groups %}
+        {% if groups|length > 1 %}<h2>{{ group.store.name }}</h2>{% endif %}
+
+        {% if group.rows|length %}
+            <table class="data fullwidth collapsible">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ "Name"|t('donky') }}</th>
+                        <th scope="col">{{ "Kind"|t('donky') }}</th>
+                        <th scope="col">{{ "Next number"|t('donky') }}</th>
+                        <th scope="col">{{ "Issued when"|t('donky') }}</th>
+                        <th scope="col">{{ "Documents"|t('donky') }}</th>
+                        <th scope="col">{{ "Status"|t('donky') }}</th>
+                        <th scope="col" class="thin"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in group.rows %}
+                        {% set type = row.type %}
+                        <tr data-id="{{ type.id }}" data-name="{{ type.name }}">
+                            <th scope="row">
+                                <a href="{{ type.cpEditUrl }}">{{ type.name }}</a>
+                                <span class="light code">{{ type.handle }}</span>
+                            </th>
+                            <td>{{ type.kindLabel }}</td>
+                            <td>{{ row.next ?? '—' }}</td>
+                            <td>{{ type.issueTriggerLabel }}</td>
+                            <td>{{ row.count }}</td>
+                            <td>
+                                {% if not row.licensed %}
+                                    <span class="status disabled"></span> {{ "Needs Pro"|t('donky') }}
+                                {% else %}
+                                    <span class="status {{ type.enabled ? 'green' : 'disabled' }}"></span>
+                                    {{ type.enabled ? "Enabled"|t('donky') : "Disabled"|t('donky') }}
+                                {% endif %}
+                            </td>
+                            <td class="thin">
+                                <button class="delete icon donky-delete" type="button" title="{{ 'Delete'|t('donky') }}"></button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="zilch"><p>{{ "No document types for this store yet."|t('donky') }}</p></div>
+        {% endif %}
+    {% endfor %}
+{% endblock %}
+
+{% js %}
+    $('.donky-delete').on('click', function() {
+        var $row = $(this).closest('tr');
+
+        if (!confirm(Craft.t('donky', 'Delete “{name}”? Every document it has issued goes with it — a document with no type has no template, no design and no sequence.', { name: $row.data('name') }))) {
+            return;
+        }
+
+        Craft.sendActionRequest('POST', 'donky/document-types/delete', { data: { id: $row.data('id') } })
+            .then(function() { $row.remove(); })
+            .catch(function(e) {
+                Craft.cp.displayError(e.response && e.response.data ? e.response.data.message : null);
+            });
+    });
+{% endjs %}

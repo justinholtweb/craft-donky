@@ -1,0 +1,80 @@
+{#
+    The bundled credit note. It credits specific lines of a specific invoice, and says which.
+
+    Variables: document, type, design, order, orders, snapshot, settings.
+    `snapshot.credit` carries the credited lines, the shipping refund and the reason.
+#}
+{% set heading = type.name ?? "Credit note"|t('donky') %}
+{% set credit = snapshot.credit ?? {} %}
+
+<div class="dk-doc">
+    {% include 'donky/_render/partials/_header' %}
+
+    {% if credit.invoiceNumber ?? null %}
+        <p class="muted">
+            {{ "Credits invoice {number}"|t('donky', { number: credit.invoiceNumber }) }}
+            {% if credit.invoiceDate ?? null %}· {{ credit.invoiceDate|date('medium') }}{% endif %}
+        </p>
+    {% endif %}
+
+    {% include 'donky/_render/partials/_addresses' %}
+
+    <table class="dk-lines">
+        <thead>
+            <tr>
+                <th>{{ "Description"|t('donky') }}</th>
+                {% if design.blocks.showSku ?? true %}<th>{{ "SKU"|t('donky') }}</th>{% endif %}
+                <th class="dk-qty">{{ "Qty"|t('donky') }}</th>
+                <th class="dk-num">{{ "Unit"|t('donky') }}</th>
+                <th class="dk-num">{{ "Credited"|t('donky') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in credit.lines ?? [] %}
+                <tr>
+                    <td>{{ line.description ?? '' }}</td>
+                    {% if design.blocks.showSku ?? true %}<td class="dk-sku">{{ line.sku ?? '' }}</td>{% endif %}
+                    <td class="dk-qty">{{ line.qty ?? 0 }}</td>
+                    <td class="dk-num">{{ document.money(line.unitPrice ?? 0) }}</td>
+                    <td class="dk-num">{{ document.money(line.amount ?? 0) }}</td>
+                </tr>
+            {% endfor %}
+
+            {% if (credit.shipping ?? 0) != 0 %}
+                <tr>
+                    <td colspan="{{ (design.blocks.showSku ?? true) ? 4 : 3 }}">{{ "Shipping"|t('donky') }}</td>
+                    <td class="dk-num">{{ document.money(credit.shipping) }}</td>
+                </tr>
+            {% endif %}
+
+            {% if (credit.adjustment ?? 0) != 0 %}
+                <tr>
+                    <td colspan="{{ (design.blocks.showSku ?? true) ? 4 : 3 }}">{{ "Adjustment"|t('donky') }}</td>
+                    <td class="dk-num">{{ document.money(credit.adjustment) }}</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <table class="dk-totals">
+        <tr class="dk-grand">
+            <td>{{ "Total credited"|t('donky') }}</td>
+            <td class="dk-num">{{ document.money(credit.total ?? 0) }}</td>
+        </tr>
+    </table>
+
+    {% if credit.reason ?? null %}
+        <div class="dk-notes">
+            <div class="dk-label">{{ "Reason"|t('donky') }}</div>
+            <div>{{ credit.reason|nl2br }}</div>
+        </div>
+    {% endif %}
+
+    {% if design.blocks.terms ?? '' %}
+        <div class="dk-terms">{{ design.blocks.terms|nl2br }}</div>
+    {% endif %}
+
+    {% if design.blocks.footer ?? '' %}
+        <div class="dk-footer">{{ design.blocks.footer }}</div>
+    {% endif %}
+</div>

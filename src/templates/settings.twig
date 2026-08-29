@@ -1,0 +1,101 @@
+{# Field names carry no `settings[…]` prefix: `craft\base\Plugin::settingsResponse()` runs this
+   template's output through `View::namespaceInputs(…, 'settings')`, so a name written as
+   `settings[foo]` here posts as `settings[settings][foo]` and saves nothing at all. #}
+{% import "_includes/forms" as forms %}
+
+{{ forms.lightswitchField({
+    first: true,
+    label: "Issue documents automatically"|t('donky'),
+    instructions: "Off leaves every document a manual act, whatever the document types say. This is how you take Donky live on an established store without a surprise run of invoice numbers."|t('donky'),
+    id: 'autoIssue',
+    name: 'autoIssue',
+    on: settings.autoIssue
+}) }}
+
+{{ forms.lightswitchField({
+    label: "Attach documents to Commerce emails"|t('donky'),
+    instructions: "The master switch for the attachment rules."|t('donky'),
+    id: 'attachToEmails',
+    name: 'attachToEmails',
+    on: settings.attachToEmails
+}) }}
+
+{{ forms.selectField({
+    label: "If a document cannot be attached"|t('donky'),
+    instructions: "An order confirmation that arrives without its invoice is a nuisance. One that never arrives is a support ticket."|t('donky'),
+    id: 'onAttachFailure',
+    name: 'onAttachFailure',
+    options: settings.attachFailureModes()|map((label, value) => { value: value, label: label })|values,
+    value: settings.onAttachFailure
+}) }}
+
+<hr>
+
+{{ forms.lightswitchField({
+    label: "Let customers download their documents"|t('donky'),
+    instructions: "Turns on signed, expiring links for document types marked as available to customers."|t('donky'),
+    id: 'customerDownloads',
+    name: 'customerDownloads',
+    on: settings.customerDownloads
+}) }}
+
+{{ forms.textField({
+    type: 'number',
+    label: "Link lifetime"|t('donky'),
+    instructions: "How long a signed customer link stays valid, in seconds. 86400 is a day."|t('donky'),
+    id: 'linkExpiry',
+    name: 'linkExpiry',
+    value: settings.linkExpiry,
+    size: 8,
+    errors: settings.getErrors('linkExpiry')
+}) }}
+
+<hr>
+
+{{ forms.textField({
+    type: 'number',
+    label: "Bulk print limit"|t('donky'),
+    instructions: "The most orders one bulk print may cover. A bundle is a single render held whole in memory, so this is a memory limit wearing a different hat."|t('donky'),
+    id: 'bulkPrintLimit',
+    name: 'bulkPrintLimit',
+    value: settings.bulkPrintLimit,
+    size: 6,
+    errors: settings.getErrors('bulkPrintLimit')
+}) }}
+
+{{ forms.textField({
+    label: "Default filename"|t('donky'),
+    instructions: "An object template used when a document type has no filename of its own. Available: `document`, `type`, `order`, `number`, `date`."|t('donky'),
+    id: 'defaultFilenameFormat',
+    name: 'defaultFilenameFormat',
+    value: settings.defaultFilenameFormat,
+    class: 'code',
+    errors: settings.getErrors('defaultFilenameFormat')
+}) }}
+
+{{ forms.lightswitchField({
+    label: "Allow remote images"|t('donky'),
+    instructions: "Lets the PDF renderer fetch images over the network. Off is the safe default — a template that pulls an image from a URL turns every render into an outbound request."|t('donky'),
+    id: 'allowRemoteImages',
+    name: 'allowRemoteImages',
+    on: settings.allowRemoteImages
+}) }}
+
+{{ forms.textField({
+    type: 'number',
+    label: "Lock timeout"|t('donky'),
+    instructions: "Seconds to wait for another request to finish with a numbering counter."|t('donky'),
+    id: 'lockTimeout',
+    name: 'lockTimeout',
+    value: settings.lockTimeout,
+    size: 5,
+    errors: settings.getErrors('lockTimeout')
+}) }}
+
+{{ forms.lightswitchField({
+    label: "Log renders"|t('donky'),
+    instructions: "Write every issue and every render to the logs. Useful while setting up, noisy afterwards."|t('donky'),
+    id: 'logRenders',
+    name: 'logRenders',
+    on: settings.logRenders
+}) }}

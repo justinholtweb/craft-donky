@@ -1,0 +1,126 @@
+{% extends "_layouts/cp" %}
+
+{% set selectedSubnavItem = 'documents' %}
+{% set crumbs = [
+    { label: "Donky"|t('donky'), url: url('donky') },
+    { label: "Documents"|t('donky'), url: url('donky/documents') }
+] %}
+
+{% block actionButton %}
+    <a class="btn" href="{{ document.previewUrl }}" target="_blank" rel="noopener">{{ "Preview"|t('donky') }}</a>
+    <a class="btn submit" href="{{ document.downloadUrl }}">{{ "Download PDF"|t('donky') }}</a>
+{% endblock %}
+
+{% block content %}
+    <div class="meta read-only">
+        <div class="data">
+            <div class="heading">{{ "Kind"|t('donky') }}</div>
+            <div class="value">{{ document.kindLabel }}</div>
+        </div>
+        <div class="data">
+            <div class="heading">{{ "Type"|t('donky') }}</div>
+            <div class="value">{{ type ? type.name : '—' }}</div>
+        </div>
+        <div class="data">
+            <div class="heading">{{ "Issued"|t('donky') }}</div>
+            <div class="value">{{ document.dateIssued ? document.dateIssued|datetime('long') : '—' }}</div>
+        </div>
+        {% if document.dateDue %}
+            <div class="data">
+                <div class="heading">{{ "Due"|t('donky') }}</div>
+                <div class="value">{{ document.dateDue|date('long') }}</div>
+            </div>
+        {% endif %}
+        <div class="data">
+            <div class="heading">{{ "Order"|t('donky') }}</div>
+            <div class="value">
+                {% if order %}
+                    <a href="{{ order.cpEditUrl }}">{{ order.reference ?: order.shortNumber }}</a>
+                {% else %}
+                    {{ document.orderIds|length ? "{n} orders"|t('donky', { n: document.orderIds|length }) : '—' }}
+                {% endif %}
+            </div>
+        </div>
+        <div class="data">
+            <div class="heading">{{ "Total"|t('donky') }}</div>
+            <div class="value">{{ document.currency ? document.money(document.total) : document.total }}</div>
+        </div>
+        <div class="data">
+            <div class="heading">{{ "Status"|t('donky') }}</div>
+            <div class="value">
+                <span class="status {{ document.isVoid ? 'disabled' : 'green' }}"></span> {{ document.statusLabel }}
+            </div>
+        </div>
+        <div class="data">
+            <div class="heading">{{ "Source"|t('donky') }}</div>
+            <div class="value">{{ document.source }}</div>
+        </div>
+    </div>
+
+    {% if document.notes %}
+        <h2>{{ "Notes"|t('donky') }}</h2>
+        <p>{{ document.notes|nl2br }}</p>
+    {% endif %}
+
+    {% set publicUrl = document.publicUrl %}
+    {% if publicUrl %}
+        <h2>{{ "Customer link"|t('donky') }}</h2>
+        <p class="light">{{ "Signed and expiring. Anyone with the link can download this document until it lapses."|t('donky') }}</p>
+        <p><input type="text" class="text fullwidth code" readonly value="{{ publicUrl }}"></p>
+    {% endif %}
+
+    <h2>{{ "The frozen order"|t('donky') }}</h2>
+    <p class="light">
+        {{ "This is what the document says, and it is what it will keep saying however the order changes from here. That is the point of a document rather than a report."|t('donky') }}
+    </p>
+    <pre class="code" style="max-height:420px; overflow:auto; background:#f5f6f8; padding:12px; border-radius:4px;">{{ document.snapshot|json_encode(constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_SLASHES')) }}</pre>
+
+    {% if canVoid %}
+        <hr>
+        <div class="flex">
+            {% if document.isVoid %}
+                <button type="button" class="btn" id="donky-restore">{{ "Restore"|t('donky') }}</button>
+            {% else %}
+                <button type="button" class="btn" id="donky-void">{{ "Void"|t('donky') }}</button>
+            {% endif %}
+            <button type="button" class="btn" id="donky-reissue">{{ "Reissue"|t('donky') }}</button>
+            <button type="button" class="btn delete" id="donky-delete">{{ "Delete"|t('donky') }}</button>
+        </div>
+        <p class="light">{{ "Voiding keeps the number. So does deleting — a number Donky has handed out is never handed out again."|t('donky') }}</p>
+    {% endif %}
+{% endblock %}
+
+{% js %}
+    {# Never nest a form in a CP page: the outer form takes the last `action` input, so a hidden
+       delete action would fire when somebody clicks Save. Post from JS instead. #}
+    function donkyPost(action, data, redirect) {
+        Craft.sendActionRequest('POST', action, { data: data })
+            .then(function(response) {
+                Craft.cp.displayNotice(response.data.message || '');
+                window.location = redirect || window.location.href;
+            })
+            .catch(function(e) {
+                Craft.cp.displayError(e.response && e.response.data ? e.response.data.message : null);
+            });
+    }
+
+    $('#donky-void').on('click', function() {
+        var reason = prompt(Craft.t('donky', 'Why is this being voided?'));
+        if (reason === null) { return; }
+        donkyPost('donky/documents/void', { id: {{ document.id }}, reason: reason });
+    });
+
+    $('#donky-restore').on('click', function() {
+        donkyPost('donky/documents/restore', { id: {{ document.id }} });
+    });
+
+    $('#donky-reissue').on('click', function() {
+        if (!confirm(Craft.t('donky', 'Void this document and issue a fresh one? The new document takes the next number in the sequence.'))) { return; }
+        donkyPost('donky/documents/reissue', { id: {{ document.id }} }, '{{ url('donky/documents') }}');
+    });
+
+    $('#donky-delete').on('click', function() {
+        if (!confirm(Craft.t('donky', 'Delete this document for good? Its number stays spent.'))) { return; }
+        donkyPost('donky/documents/delete', { id: {{ document.id }} }, '{{ url('donky/documents') }}');
+    });
+{% endjs %}

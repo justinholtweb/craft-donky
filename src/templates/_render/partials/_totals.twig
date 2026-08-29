@@ -1,0 +1,64 @@
+{# The money. The breakdown can be switched off in the Designer for stores that only ever want a
+   single number on the paperwork. #}
+{% set totals = snapshot.totals ?? {} %}
+{% set adjustments = snapshot.adjustments ?? {} %}
+{% set breakdown = design.blocks.showTotalsBreakdown ?? true %}
+
+<table class="dk-totals">
+    {% if breakdown %}
+        <tr>
+            <td class="muted">{{ "Subtotal"|t('donky') }}</td>
+            <td class="dk-num">{{ document.money(totals.itemSubtotal ?? 0) }}</td>
+        </tr>
+
+        {% for adjustment in adjustments.discount ?? [] %}
+            <tr>
+                <td class="muted">{{ adjustment.name ?? "Discount"|t('donky') }}</td>
+                <td class="dk-num">{{ document.money(adjustment.amount ?? 0) }}</td>
+            </tr>
+        {% endfor %}
+
+        {% for adjustment in adjustments.shipping ?? [] %}
+            <tr>
+                <td class="muted">{{ adjustment.name ?? "Shipping"|t('donky') }}</td>
+                <td class="dk-num">{{ document.money(adjustment.amount ?? 0) }}</td>
+            </tr>
+        {% endfor %}
+
+        {% for adjustment in adjustments.tax ?? [] %}
+            <tr>
+                <td class="muted">
+                    {{ adjustment.name ?? "Tax"|t('donky') }}
+                    {% if adjustment.included ?? false %}<span class="muted">({{ "included"|t('donky') }})</span>{% endif %}
+                </td>
+                <td class="dk-num">{{ adjustment.included ?? false ? '' : document.money(adjustment.amount ?? 0) }}</td>
+            </tr>
+        {% endfor %}
+
+        {% for adjustment in adjustments.other ?? [] %}
+            <tr>
+                <td class="muted">{{ adjustment.name ?? '' }}</td>
+                <td class="dk-num">{{ document.money(adjustment.amount ?? 0) }}</td>
+            </tr>
+        {% endfor %}
+    {% endif %}
+
+    <tr class="dk-grand">
+        <td>{{ "Total"|t('donky') }}</td>
+        <td class="dk-num">{{ document.money(totals.total ?? 0) }}</td>
+    </tr>
+
+    {% if (totals.paid ?? 0) > 0 %}
+        <tr>
+            <td class="muted">{{ "Paid"|t('donky') }}</td>
+            <td class="dk-num">{{ document.money(totals.paid) }}</td>
+        </tr>
+    {% endif %}
+
+    {% if (totals.outstanding ?? 0) > 0 %}
+        <tr>
+            <td><strong>{{ "Amount due"|t('donky') }}</strong></td>
+            <td class="dk-num"><strong>{{ document.money(totals.outstanding) }}</strong></td>
+        </tr>
+    {% endif %}
+</table>

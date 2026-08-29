@@ -1,0 +1,66 @@
+{# Injected into the Commerce order edit screen through the `cp.commerce.order.edit.details` hook.
+   Never a <form>: this markup renders inside Craft's page form, and a nested form is dropped by
+   the parser while its inputs survive — so a hidden action input would fire on Save. #}
+<div id="donky-panel" class="order-details">
+    <div class="order-flex order-details-block">
+        <h3 class="first">{{ "Documents"|t('donky') }}</h3>
+    </div>
+
+    {% if documents|length %}
+        <table class="data fullwidth">
+            <tbody>
+                {% for document in documents %}
+                    <tr>
+                        <td>
+                            <a href="{{ document.cpUrl }}">{{ document.formattedNumber ?: document.kindLabel }}</a>
+                            <div class="light">
+                                {{ document.type.name ?? document.kindLabel }}
+                                {% if document.dateIssued %} · {{ document.dateIssued|date('short') }}{% endif %}
+                                {% if document.isVoid %} · <strong>{{ "void"|t('donky') }}</strong>{% endif %}
+                            </div>
+                        </td>
+                        <td class="thin">
+                            <a class="btn small" href="{{ document.downloadUrl }}">{{ "PDF"|t('donky') }}</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="light">{{ "Nothing issued for this order yet."|t('donky') }}</p>
+    {% endif %}
+
+    {% if canIssue and types|length %}
+        <div class="flex" style="margin-top:10px; align-items:center;">
+            <select id="donky-issue-type">
+                {% for type in types %}
+                    <option value="{{ type.id }}">{{ type.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn" id="donky-issue">{{ "Issue"|t('donky') }}</button>
+
+            {% if isPro %}
+                <a class="btn" href="{{ url('donky/orders/' ~ order.id ~ '/credit') }}">{{ "Credit note"|t('donky') }}</a>
+            {% endif %}
+        </div>
+        <p class="light" style="margin-top:6px;">
+            {{ "Issuing spends the next number in that type's sequence."|t('donky') }}
+        </p>
+    {% endif %}
+</div>
+
+{% js %}
+    $('#donky-issue').on('click', function() {
+        var $button = $(this).addClass('disabled').prop('disabled', true);
+
+        Craft.sendActionRequest('POST', 'donky/documents/issue', {
+            data: { typeId: $('#donky-issue-type').val(), orderId: {{ order.id }} }
+        }).then(function(response) {
+            Craft.cp.displayNotice(response.data.message || '');
+            window.location.reload();
+        }).catch(function(e) {
+            $button.removeClass('disabled').prop('disabled', false);
+            Craft.cp.displayError(e.response && e.response.data ? e.response.data.message : null);
+        });
+    });
+{% endjs %}

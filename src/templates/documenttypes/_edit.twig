@@ -1,0 +1,267 @@
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+{% set selectedSubnavItem = 'types' %}
+{% set crumbs = [
+    { label: "Donky"|t('donky'), url: url('donky') },
+    { label: "Document types"|t('donky'), url: url('donky/types') }
+] %}
+{% set fullPageForm = true %}
+
+{% block content %}
+    <input type="hidden" name="action" value="donky/document-types/save">
+    {{ redirectInput('donky/types') }}
+    {% if type.id %}<input type="hidden" name="id" value="{{ type.id }}">{% endif %}
+    <input type="hidden" name="storeId" value="{{ type.storeId }}">
+
+    {{ forms.textField({
+        first: true,
+        label: "Name"|t('donky'),
+        id: 'name',
+        name: 'name',
+        value: type.name,
+        required: true,
+        errors: type.getErrors('name')
+    }) }}
+
+    {{ forms.textField({
+        label: "Handle"|t('donky'),
+        instructions: "How templates and the console refer to this type."|t('donky'),
+        id: 'handle',
+        name: 'handle',
+        value: type.handle,
+        class: 'code',
+        required: true,
+        errors: type.getErrors('handle')
+    }) }}
+
+    {{ forms.selectField({
+        label: "Kind"|t('donky'),
+        instructions: "What this document *is*: whether it is numbered, whether it belongs to one order, and whether the money runs the other way."|t('donky'),
+        id: 'kind',
+        name: 'kind',
+        options: kindOptions,
+        value: type.kind,
+        errors: type.getErrors('kind')
+    }) }}
+
+    {{ forms.selectField({
+        label: "Design"|t('donky'),
+        instructions: "The look. Manage designs in the Designer."|t('donky'),
+        id: 'designId',
+        name: 'designId',
+        options: designOptions,
+        value: type.designId
+    }) }}
+
+    {{ forms.textField({
+        label: "Template"|t('donky'),
+        instructions: "A site template that renders this document. Leave it empty to use the bundled template for the kind — `{default}` — which you can copy out of the plugin and edit."|t('donky', { default: defaultTemplate }),
+        id: 'templatePath',
+        name: 'templatePath',
+        value: type.templatePath,
+        class: 'code',
+        placeholder: defaultTemplate,
+        errors: type.getErrors('templatePath')
+    }) }}
+
+    <hr>
+
+    <h2>{{ "Numbering"|t('donky') }}</h2>
+
+    {{ forms.selectField({
+        label: "Number source"|t('donky'),
+        instructions: abacus
+            ? "Abacus is installed, so the order reference is already a sequential order number — pick it here and the invoice number matches the order."|t('donky')
+            : "Donky counts under its own lock, or borrows the number the order already has."|t('donky'),
+        id: 'numberSource',
+        name: 'numberSource',
+        options: sourceOptions,
+        value: type.numberSource
+    }) }}
+
+    <div id="donky-numbering">
+        {{ forms.textField({
+            label: "Format"|t('donky'),
+            instructions: "Tokens: `{number}` `{rawNumber}` `{yyyy}` `{yy}` `{mm}` `{dd}` `{typeHandle}` `{storeHandle}` `{orderNumber}` `{orderReference}`"|t('donky'),
+            id: 'format',
+            name: 'format',
+            value: type.format,
+            class: 'code',
+            errors: type.getErrors('format')
+        }) }}
+
+        <div class="field">
+            <div class="heading"><label>{{ "Next number"|t('donky') }}</label></div>
+            <div class="input">
+                <code id="donky-preview">{{ preview ?? '—' }}</code>
+                <span class="light">{{ "— a preview never spends a number."|t('donky') }}</span>
+            </div>
+        </div>
+
+        {{ forms.textField({
+            type: 'number',
+            label: "Start at"|t('donky'),
+            id: 'startNumber',
+            name: 'startNumber',
+            value: type.startNumber,
+            size: 8,
+            errors: type.getErrors('startNumber')
+        }) }}
+
+        {{ forms.textField({
+            type: 'number',
+            label: "Increment by"|t('donky'),
+            id: 'increment',
+            name: 'increment',
+            value: type.increment,
+            size: 5,
+            errors: type.getErrors('increment')
+        }) }}
+
+        {{ forms.textField({
+            type: 'number',
+            label: "Pad to"|t('donky'),
+            instructions: "Digits, zero-padded. 0 leaves the number alone."|t('donky'),
+            id: 'padLength',
+            name: 'padLength',
+            value: type.padLength,
+            size: 5,
+            errors: type.getErrors('padLength')
+        }) }}
+
+        {{ forms.selectField({
+            label: "Reset"|t('donky'),
+            instructions: "Each reset period counts on its own."|t('donky'),
+            id: 'resetPolicy',
+            name: 'resetPolicy',
+            options: resetOptions,
+            value: type.resetPolicy
+        }) }}
+    </div>
+
+    {% if counters|length %}
+        <div class="field">
+            <div class="heading"><label>{{ "Counters"|t('donky') }}</label></div>
+            <table class="data fullwidth">
+                <thead><tr><th>{{ "Period"|t('donky') }}</th><th>{{ "Next"|t('donky') }}</th></tr></thead>
+                <tbody>
+                    {% for counter in counters %}
+                        <tr>
+                            <td><code>{{ counter.periodKey ?: "all time"|t('donky') }}</code></td>
+                            <td>{{ counter.nextNumber }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    <hr>
+
+    <h2>{{ "Issuing"|t('donky') }}</h2>
+
+    {{ forms.selectField({
+        label: "Issue this document"|t('donky'),
+        instructions: "Nothing is issued automatically until this says so, and the whole lot can be switched off in the settings."|t('donky'),
+        id: 'issueTrigger',
+        name: 'issueTrigger',
+        options: triggerOptions,
+        value: type.issueTrigger,
+        toggle: true,
+        targetPrefix: 'donky-trigger-'
+    }) }}
+
+    <div id="donky-trigger-status" class="{{ type.issueTrigger == 'status' ? '' : 'hidden' }}">
+        {{ forms.selectField({
+            label: "Status"|t('donky'),
+            id: 'issueStatusId',
+            name: 'issueStatusId',
+            options: statusOptions,
+            value: type.issueStatusId,
+            errors: type.getErrors('issueStatusId')
+        }) }}
+    </div>
+
+    {{ forms.textField({
+        type: 'number',
+        label: "Payment terms"|t('donky'),
+        instructions: "Days after issue to show as the due date. 0 means no due date."|t('donky'),
+        id: 'dueDays',
+        name: 'dueDays',
+        value: type.dueDays,
+        size: 5,
+        errors: type.getErrors('dueDays')
+    }) }}
+
+    {{ forms.textField({
+        label: "Filename"|t('donky'),
+        instructions: "An object template, without the extension. Available: `document`, `type`, `order`, `number`, `date`. Empty uses the site default."|t('donky'),
+        id: 'filenameFormat',
+        name: 'filenameFormat',
+        value: type.filenameFormat,
+        class: 'code'
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: "Available to customers"|t('donky'),
+        instructions: "Lets this document be handed to a customer over a signed, expiring link."|t('donky'),
+        id: 'availableToCustomer',
+        name: 'availableToCustomer',
+        on: type.availableToCustomer
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: "Enabled"|t('donky'),
+        id: 'enabled',
+        name: 'enabled',
+        on: type.enabled
+    }) }}
+
+    {% if isPro %}
+        <hr>
+        <h2>{{ "Conditions"|t('donky') }}</h2>
+        {{ forms.field({
+            label: "Only for orders matching"|t('donky'),
+            instructions: "Leave empty to issue for every order. Only checked when a document is issued automatically."|t('donky')
+        }, type.condition.getBuilderHtml()) }}
+    {% endif %}
+{% endblock %}
+
+{% js %}
+    (function() {
+        var $fields = $('#donky-numbering');
+        var $source = $('#numberSource');
+
+        function toggleNumbering() {
+            $fields.toggleClass('hidden', $source.val() === 'none');
+        }
+
+        $source.on('change', toggleNumbering);
+        toggleNumbering();
+
+        var timer = null;
+
+        function refreshPreview() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                Craft.sendActionRequest('POST', 'donky/document-types/preview-number', {
+                    data: {
+                        id: {{ type.id ?? 'null' }},
+                        storeId: {{ type.storeId ?? 'null' }},
+                        numberSource: $source.val(),
+                        format: $('#format').val(),
+                        startNumber: $('#startNumber').val(),
+                        increment: $('#increment').val(),
+                        padLength: $('#padLength').val(),
+                        resetPolicy: $('#resetPolicy').val()
+                    }
+                }).then(function(response) {
+                    $('#donky-preview').text(response.data.preview || '—');
+                });
+            }, 350);
+        }
+
+        $('#format, #startNumber, #increment, #padLength, #resetPolicy, #numberSource').on('input change', refreshPreview);
+    })();
+{% endjs %}

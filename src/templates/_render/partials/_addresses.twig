@@ -1,0 +1,37 @@
+{# Billing on the left, shipping on the right, either one droppable in the Designer. #}
+{% set showBilling = design.blocks.showBillingAddress ?? true %}
+{% set showShipping = design.blocks.showShippingAddress ?? true %}
+{% set billing = snapshot.billingAddress ?? {} %}
+{% set shipping = snapshot.shippingAddress ?? {} %}
+
+{% if showBilling or showShipping %}
+    <table class="dk-parties">
+        <tr>
+            {% if showBilling %}
+                <td>
+                    <div class="dk-label">{{ "Bill to"|t('donky') }}</div>
+                    {% if billing.name ?? null %}<strong>{{ billing.name }}</strong><br>{% endif %}
+                    {% if billing.organization ?? null %}{{ billing.organization }}<br>{% endif %}
+                    {% for line in billing.lines ?? [] %}{{ line }}<br>{% endfor %}
+                    {% if billing.organizationTaxId ?? null %}{{ "Tax ID"|t('donky') }}: {{ billing.organizationTaxId }}<br>{% endif %}
+                    {% if snapshot.order.email ?? null %}<span class="muted">{{ snapshot.order.email }}</span>{% endif %}
+                </td>
+            {% endif %}
+            {% if showShipping %}
+                <td>
+                    <div class="dk-label">{{ "Ship to"|t('donky') }}</div>
+                    {% if shipping.lines ?? [] %}
+                        {% if shipping.name ?? null %}<strong>{{ shipping.name }}</strong><br>{% endif %}
+                        {% if shipping.organization ?? null %}{{ shipping.organization }}<br>{% endif %}
+                        {% for line in shipping.lines %}{{ line }}<br>{% endfor %}
+                    {% else %}
+                        <span class="muted">{{ "No shipping address"|t('donky') }}</span>
+                    {% endif %}
+                    {% if snapshot.order.shippingMethod ?? null %}
+                        <div class="muted" style="margin-top:3pt;">{{ snapshot.order.shippingMethod }}</div>
+                    {% endif %}
+                </td>
+            {% endif %}
+        </tr>
+    </table>
+{% endif %}

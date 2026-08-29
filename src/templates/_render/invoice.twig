@@ -1,0 +1,26 @@
+{#
+    The bundled invoice.
+
+    This is a real Twig file, not a black box: copy `src/templates/_render/` out of the plugin into
+    your own `templates/donky/_render/`, point the document type at your copy, and everything below
+    is yours. `design` carries the Designer's settings so a copied template still gets the logo,
+    the colours and the seller block for free.
+
+    Variables: document, type, design, order, orders, snapshot, settings.
+#}
+{% set heading = type.name ?? "Invoice"|t('donky') %}
+{% set paid = (snapshot.totals.outstanding ?? 1) <= 0 and (snapshot.totals.paid ?? 0) > 0 %}
+
+<div class="dk-doc">
+    {% if document.isVoid %}
+        <div class="dk-stamp">{{ "Void"|t('donky') }}</div>
+    {% elseif paid and (design.blocks.showPaidStamp ?? true) %}
+        <div class="dk-stamp">{{ "Paid"|t('donky') }}</div>
+    {% endif %}
+
+    {% include 'donky/_render/partials/_header' %}
+    {% include 'donky/_render/partials/_addresses' %}
+    {% include 'donky/_render/partials/_lines' with { showPrices: true } %}
+    {% include 'donky/_render/partials/_totals' %}
+    {% include 'donky/_render/partials/_footer' %}
+</div>

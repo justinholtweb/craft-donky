@@ -1,0 +1,94 @@
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+{% set selectedSubnavItem = 'documents' %}
+{% set crumbs = [
+    { label: "Donky"|t('donky'), url: url('donky') },
+    { label: "Documents"|t('donky'), url: url('donky/documents') }
+] %}
+{% set fullPageForm = true %}
+
+{% block content %}
+    <input type="hidden" name="action" value="donky/credit-notes/save">
+    <input type="hidden" name="orderId" value="{{ order.id }}">
+
+    <p class="light">
+        {{ "A credit note is paperwork, not a refund. Commerce moves the money; this records what was credited and why. Issue one without refunding, or refund without issuing one — they are deliberately separate."|t('donky') }}
+    </p>
+
+    {% if refunded > 0 %}
+        <p class="light">{{ "Commerce has recorded {amount} of refunds against this order."|t('donky', { amount: refunded }) }}</p>
+    {% endif %}
+
+    {{ forms.selectField({
+        first: true,
+        label: "Credit note type"|t('donky'),
+        name: 'typeId',
+        options: types|map(t => { value: t.id, label: t.name })|values
+    }) }}
+
+    {% if invoices|length %}
+        {{ forms.selectField({
+            label: "Credits invoice"|t('donky'),
+            instructions: "Which invoice this credits. Leave it on the most recent unless you know otherwise."|t('donky'),
+            name: 'sourceDocumentId',
+            options: invoices|map(d => { value: d.id, label: d.formattedNumber })|values
+        }) }}
+    {% endif %}
+
+    <h2>{{ "Lines"|t('donky') }}</h2>
+
+    <table class="data fullwidth">
+        <thead>
+            <tr>
+                <th>{{ "Item"|t('donky') }}</th>
+                <th>{{ "SKU"|t('donky') }}</th>
+                <th>{{ "Ordered"|t('donky') }}</th>
+                <th>{{ "Already credited"|t('donky') }}</th>
+                <th>{{ "Credit now"|t('donky') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in lines %}
+                <tr>
+                    <th scope="row">{{ line.description }}</th>
+                    <td class="code light">{{ line.sku }}</td>
+                    <td>{{ line.qty }}</td>
+                    <td>{{ line.credited }}</td>
+                    <td>
+                        {% if line.remaining > 0 %}
+                            <input type="number" class="text" name="qty[{{ line.lineItemId }}]" value="0" min="0" max="{{ line.remaining }}" size="4">
+                            <span class="light">/ {{ line.remaining }}</span>
+                        {% else %}
+                            <span class="light">{{ "Fully credited"|t('donky') }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <hr>
+
+    {{ forms.textField({
+        label: "Shipping to credit"|t('donky'),
+        name: 'shipping',
+        value: 0,
+        size: 8
+    }) }}
+
+    {{ forms.textField({
+        label: "Other adjustment"|t('donky'),
+        instructions: "Anything else, positive or negative."|t('donky'),
+        name: 'adjustment',
+        value: 0,
+        size: 8
+    }) }}
+
+    {{ forms.textareaField({
+        label: "Reason"|t('donky'),
+        instructions: "Printed on the credit note."|t('donky'),
+        name: 'reason',
+        rows: 3
+    }) }}
+{% endblock %}

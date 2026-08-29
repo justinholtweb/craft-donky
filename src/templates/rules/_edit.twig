@@ -1,0 +1,72 @@
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+{% set selectedSubnavItem = 'rules' %}
+{% set crumbs = [
+    { label: "Donky"|t('donky'), url: url('donky') },
+    { label: "Attachment rules"|t('donky'), url: url('donky/rules') }
+] %}
+{% set fullPageForm = true %}
+
+{% block content %}
+    <input type="hidden" name="action" value="donky/rules/save">
+    {{ redirectInput('donky/rules') }}
+    {% if rule.id %}<input type="hidden" name="id" value="{{ rule.id }}">{% endif %}
+    <input type="hidden" name="storeId" value="{{ rule.storeId }}">
+
+    {{ forms.textField({
+        first: true,
+        label: "Name"|t('donky'),
+        name: 'name',
+        value: rule.name,
+        required: true,
+        errors: rule.getErrors('name')
+    }) }}
+
+    {{ forms.selectField({
+        label: "Attach"|t('donky'),
+        name: 'typeId',
+        options: typeOptions,
+        value: rule.typeId,
+        errors: rule.getErrors('typeId')
+    }) }}
+
+    {{ forms.selectField({
+        label: "To this email"|t('donky'),
+        instructions: "One of Commerce's emails, or every one of them."|t('donky'),
+        name: 'emailId',
+        options: emailOptions,
+        value: rule.emailId
+    }) }}
+
+    {% if isPro %}
+        {{ forms.selectField({
+            label: "When the order reaches"|t('donky'),
+            instructions: "Matched against the status change that sent the email."|t('donky'),
+            name: 'orderStatusId',
+            options: statusOptions,
+            value: rule.orderStatusId
+        }) }}
+    {% endif %}
+
+    {{ forms.lightswitchField({
+        label: "Issue the document if it does not exist yet"|t('donky'),
+        instructions: "Off means the rule only attaches documents that have already been issued — which is what you want for a credit note."|t('donky'),
+        name: 'issueIfMissing',
+        on: rule.issueIfMissing
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: "Enabled"|t('donky'),
+        name: 'enabled',
+        on: rule.enabled
+    }) }}
+
+    {% if isPro %}
+        <hr>
+        {{ forms.field({
+            label: "Only for orders matching"|t('donky'),
+            instructions: "Leave empty to attach to every order."|t('donky')
+        }, rule.condition.getBuilderHtml()) }}
+    {% endif %}
+{% endblock %}
