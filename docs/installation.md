@@ -1,4 +1,9 @@
-# Installation
+---
+title: Installation
+slug: installation
+order: 10
+summary: Requirements, install, what gets seeded, and issuing your first document.
+---
 
 ## Requirements
 

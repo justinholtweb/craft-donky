@@ -1,4 +1,9 @@
-# Configuration
+---
+title: Configuration
+slug: configuration
+order: 20
+summary: Plugin settings, document types, numbering formats, designs and attachment rules.
+---
 
 ## Plugin settings
 

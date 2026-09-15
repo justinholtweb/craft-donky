@@ -1,4 +1,9 @@
-# FAQ
+---
+title: FAQ
+slug: faq
+order: 50
+summary: Common questions about invoices and packing slips in Craft Commerce.
+---
 
 **Why is nothing being issued?**
 Three switches, in order: the plugin setting *Issue documents automatically*, the document type's

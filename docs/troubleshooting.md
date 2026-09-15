@@ -1,4 +1,9 @@
-# Troubleshooting
+---
+title: Troubleshooting
+slug: troubleshooting
+order: 40
+summary: Blank PDFs, missing logos, numbers that never arrived, and emails that went out bare.
+---
 
 ## The PDF is blank, or the logo is missing
 
