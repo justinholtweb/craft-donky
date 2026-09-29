@@ -6,7 +6,6 @@ use Craft;
 use craft\base\Component;
 use craft\commerce\elements\Order;
 use craft\commerce\models\OrderAdjustment;
-use craft\commerce\Plugin as Commerce;
 use craft\db\Query;
 use craft\elements\Address;
 use craft\helpers\ArrayHelper;
@@ -168,7 +167,7 @@ class Documents extends Component
             $options['snapshot'] ?? []
         );
 
-        $document->currency = $order?->currency ?? ($document->snapshot['currency'] ?? null);
+        $document->currency = $order->currency ?? ($document->snapshot['currency'] ?? null);
         $document->total = (float)($document->snapshot['totals']['total'] ?? 0);
 
         if (Kind::isCredit($type->kind)) {
@@ -359,13 +358,31 @@ class Documents extends Component
         $name = $number;
 
         if ($format) {
+            // The format is Twig written by anybody who may manage document types, so it runs in
+            // Craft's sandbox and sees plain values, not objects: with the live order and Craft
+            // in reach, `{{ craft.app.config.db.password }}` came back in every download's
+            // Content-Disposition filename.
+            $documentVars = [
+                'id' => $document->id,
+                'kind' => $document->kind,
+                'number' => $document->number,
+                'formattedNumber' => $document->formattedNumber,
+                'dateIssued' => $document->dateIssued ?? new DateTime(),
+            ];
+
             try {
-                $name = Craft::$app->getView()->renderObjectTemplate($format, $document, [
-                    'document' => $document,
-                    'type' => $type,
-                    'order' => $order,
+                $name = Craft::$app->getView()->renderSandboxedObjectTemplate($format, $documentVars, [
+                    'document' => $documentVars,
+                    'type' => $type ? ['handle' => $type->handle, 'name' => $type->name, 'kind' => $type->kind] : [],
+                    'order' => $order ? [
+                        'id' => $order->id,
+                        'number' => $order->number,
+                        'shortNumber' => $order->getShortNumber(),
+                        'reference' => $order->reference,
+                        'dateOrdered' => $order->dateOrdered,
+                    ] : [],
                     'number' => $number,
-                    'date' => $document->dateIssued ?? new DateTime(),
+                    'date' => $documentVars['dateIssued'],
                 ]);
             } catch (\Throwable $e) {
                 // A broken filename template must not stop an invoice from existing.
@@ -375,6 +392,7 @@ class Documents extends Component
         }
 
         $name = FileHelper::sanitizeFilename(trim($name), ['asciiOnly' => false, 'separator' => '-']);
+        $name = mb_substr($name, 0, 150);
 
         return $name !== '' ? $name : 'document';
     }
@@ -401,7 +419,7 @@ class Documents extends Component
             'dueAt' => $document->dateDue?->format(DATE_ATOM),
             'number' => $document->formattedNumber,
             'typeName' => $type?->name,
-            'seller' => $design?->seller ?? [],
+            'seller' => $design->seller ?? [],
             'currency' => $order?->currency,
             'lineItems' => [],
             'adjustments' => ['shipping' => [], 'discount' => [], 'tax' => [], 'other' => []],

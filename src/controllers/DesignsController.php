@@ -196,7 +196,7 @@ class DesignsController extends Controller
             'kind' => $type->kind,
             'formattedNumber' => 'INV-' . date('Y') . '-0042',
             'dateIssued' => new \DateTime(),
-            'currency' => $order?->currency ?? 'USD',
+            'currency' => $order->currency ?? 'USD',
             'status' => Document::STATUS_ISSUED,
         ]);
 
@@ -213,6 +213,9 @@ class DesignsController extends Controller
         $this->response->format = Response::FORMAT_RAW;
         $this->response->data = $html;
         $this->response->getHeaders()->set('Content-Type', 'text/html; charset=UTF-8');
+        // The preview is HTML served from the control panel's own origin. Nothing in a document
+        // needs script, so the browser is told to run none of it.
+        $this->response->getHeaders()->set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src * data: blob:; font-src * data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'");
 
         return $this->response;
     }

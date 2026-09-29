@@ -85,12 +85,12 @@ class Rule extends Model
 
     public function getEmailLabel(): string
     {
-        return $this->getEmail()?->name ?? Craft::t('donky', 'Any email');
+        return $this->getEmail()->name ?? Craft::t('donky', 'Any email');
     }
 
     public function getStatusLabel(): string
     {
-        return $this->getOrderStatus()?->name ?? Craft::t('donky', 'Any status');
+        return $this->getOrderStatus()->name ?? Craft::t('donky', 'Any status');
     }
 
     public function getCondition(): DonkyOrderCondition

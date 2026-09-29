@@ -110,7 +110,7 @@ class PickLists extends Component
                 'id' => $order->id,
                 'reference' => $order->reference ?: $order->getShortNumber(),
                 'shortNumber' => $order->getShortNumber(),
-                'name' => $order->getShippingAddress()?->fullName ?? $order->getEmail(),
+                'name' => $order->getShippingAddress()->fullName ?? $order->getEmail(),
                 'status' => $order->getOrderStatus()?->name,
                 'items' => count($order->getLineItems()),
             ], $orders),

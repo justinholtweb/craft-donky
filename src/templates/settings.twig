@@ -65,7 +65,7 @@
 
 {{ forms.textField({
     label: "Default filename"|t('donky'),
-    instructions: "An object template used when a document type has no filename of its own. Available: `document`, `type`, `order`, `number`, `date`."|t('donky'),
+    instructions: "Twig used when a document type has no filename of its own, run in Craft’s sandbox. Available: `number`, `date`, `document.formattedNumber`, `type.handle`, `order.number`, `order.shortNumber`, `order.reference`."|t('donky'),
     id: 'defaultFilenameFormat',
     name: 'defaultFilenameFormat',
     value: settings.defaultFilenameFormat,

@@ -56,6 +56,7 @@ class BulkController extends Controller
             // be seen. Say what went wrong in the tab that is already open.
             $this->response->format = Response::FORMAT_RAW;
             $this->response->getHeaders()->set('Content-Type', 'text/html; charset=UTF-8');
+            $this->response->getHeaders()->set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
             $this->response->data = '<!DOCTYPE html><meta charset="utf-8"><body style="font:14px/1.5 system-ui;padding:40px;max-width:36em">'
                 . '<h1 style="font-size:18px">' . Craft::t('donky', 'Nothing was printed') . '</h1><p>'
                 . \craft\helpers\Html::encode($e->getMessage()) . '</p>';

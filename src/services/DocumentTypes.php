@@ -2,7 +2,6 @@
 
 namespace justinholtweb\donky\services;
 
-use Craft;
 use craft\base\Component;
 use craft\commerce\elements\Order;
 use craft\db\Query;

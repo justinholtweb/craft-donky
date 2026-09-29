@@ -192,6 +192,10 @@ class Design extends Model
             [['logoAssetId'], 'integer'],
             [['margins'], 'validateMargins', 'skipOnEmpty' => false],
             [['colors'], 'validateColors', 'skipOnEmpty' => false],
+            // CSS never needs `<`, and it is the only way out of the <style> element the
+            // stylesheet is inlined into — `</style><script>` here ran in an admin's session on
+            // every preview.
+            [['customCss'], 'match', 'not' => true, 'pattern' => '/</', 'message' => Craft::t('donky', 'Custom CSS cannot contain “<”.')],
         ];
     }
 
@@ -386,7 +390,9 @@ CSS;
         }
 
         if ($this->customCss) {
-            $css .= "\n/* custom */\n" . $this->customCss;
+            // Also neutralised here, for anything saved before the validation rule existed:
+            // `\3C ` is CSS's own escape for `<`, so legitimate CSS keeps working.
+            $css .= "\n/* custom */\n" . str_replace('<', '\\3C ', $this->customCss);
         }
 
         return $css;

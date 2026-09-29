@@ -226,7 +226,7 @@ class DocumentsController extends Controller
         $document = $plugin->getDocuments()->getDocumentByNumber($number);
 
         if ($document === null) {
-            $this->stderr("No document numbered “$number”.\n", Console::FG_RED);
+            $this->stderr("No document numbered “{$number}”.\n", Console::FG_RED);
 
             return ExitCode::DATAERR;
         }

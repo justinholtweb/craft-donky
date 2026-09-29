@@ -196,7 +196,7 @@
 
     {{ forms.textField({
         label: "Filename"|t('donky'),
-        instructions: "An object template, without the extension. Available: `document`, `type`, `order`, `number`, `date`. Empty uses the site default."|t('donky'),
+        instructions: "Twig, without the extension, run in Craft’s sandbox. Available: `number`, `date`, `document.formattedNumber`/`.number`/`.kind`/`.dateIssued`, `type.handle`/`.name`, `order.number`/`.shortNumber`/`.reference`/`.dateOrdered`. Empty uses the site default."|t('donky'),
         id: 'filenameFormat',
         name: 'filenameFormat',
         value: type.filenameFormat,

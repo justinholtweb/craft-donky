@@ -152,9 +152,9 @@ class Numbers extends Component
             '{mm}' => $at->format('m'),
             '{dd}' => $at->format('d'),
             '{typeHandle}' => (string)$type->handle,
-            '{storeHandle}' => (string)($store?->handle ?? ''),
+            '{storeHandle}' => (string)($store->handle ?? ''),
             '{orderNumber}' => (string)($order?->getShortNumber() ?? ''),
-            '{orderReference}' => (string)($order?->reference ?? ''),
+            '{orderReference}' => (string)($order->reference ?? ''),
         ]);
     }
 

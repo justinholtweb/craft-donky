@@ -909,6 +909,53 @@ try {
         }
     });
 
+    section('Security');
+
+    check('a filename format cannot reach Craft (sandboxed; falls back to the number)', function() use ($documents, $invoiceType, $variant) {
+        $format = $invoiceType->filenameFormat;
+        $invoiceType->filenameFormat = '{{ craft.app.config.db.password }}';
+        $document = $documents->issue($invoiceType, makeOrder($variant));
+        $name = $documents->buildFileName($document);
+        $invoiceType->filenameFormat = $format;
+        $secret = (string)Craft::$app->getConfig()->getDb()->password;
+
+        return ($secret === '' || !str_contains($name, $secret)) && $name !== '' ?: "filename: $name";
+    });
+
+    check('the default filename format still renders under the sandbox', function() use ($documents, $invoiceType, $variant) {
+        $format = $invoiceType->filenameFormat;
+        $invoiceType->filenameFormat = null;
+        $document = $documents->issue($invoiceType, makeOrder($variant));
+        $name = $documents->buildFileName($document);
+        $invoiceType->filenameFormat = $format;
+
+        return str_starts_with($name, $invoiceType->handle . '-') ?: "filename: $name";
+    });
+
+    check('filename formats can still use order, number and the date filter', function() use ($documents, $invoiceType, $variant) {
+        $format = $invoiceType->filenameFormat;
+        $invoiceType->filenameFormat = '{{ type.handle }}-{{ order.shortNumber }}-{{ date|date("Y") }}-{number}';
+        $document = $documents->issue($invoiceType, makeOrder($variant));
+        $name = $documents->buildFileName($document);
+        $invoiceType->filenameFormat = $format;
+
+        return str_contains($name, date('Y')) && str_starts_with($name, $invoiceType->handle . '-') ?: "filename: $name";
+    });
+
+    check('custom CSS containing "<" is refused on save', function() {
+        $design = new \justinholtweb\donky\models\Design(['name' => 'x', 'handle' => 'x', 'customCss' => 'body{} </style><script>alert(1)</script>']);
+        $design->validate(['customCss']);
+
+        return $design->hasErrors('customCss');
+    });
+
+    check('stored custom CSS cannot close the <style> element', function() {
+        $design = new \justinholtweb\donky\models\Design(['name' => 'x', 'handle' => 'x', 'customCss' => '.a{} </style><script>alert(1)</script>']);
+        $html = \justinholtweb\donky\Plugin::getInstance()->getRenderer()->wrap($design, '<p>body</p>');
+
+        return substr_count(strtolower($html), '</style>') === 1 && !str_contains($html, '<script>') ?: 'breakout in rendered HTML';
+    });
+
     section('Editions');
 
     check('Pro reports Pro', function() {

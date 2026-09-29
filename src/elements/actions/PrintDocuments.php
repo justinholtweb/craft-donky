@@ -4,7 +4,6 @@ namespace justinholtweb\donky\elements\actions;
 
 use Craft;
 use craft\base\ElementAction;
-use justinholtweb\donky\Plugin;
 
 /**
  * "Print invoices", "Print packing slips", "Build pick list" — one action per document type on the

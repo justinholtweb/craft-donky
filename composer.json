@@ -31,8 +31,13 @@
         "php": "^8.2",
         "ext-json": "*",
         "ext-mbstring": "*",
-        "craftcms/cms": "^5.3.0",
+        "craftcms/cms": "^5.9.0",
         "craftcms/commerce": "^5.0.0"
+    },
+    "require-dev": {
+        "craftcms/ecs": "dev-main",
+        "craftcms/phpstan": "dev-main",
+        "phpstan/phpstan": "^1.12 || ^2.2"
     },
     "suggest": {
         "dompdf/dompdf": "Renders documents to PDF. Craft Commerce already requires it, so this is only relevant if that ever changes."
@@ -56,5 +61,10 @@
         "documentationUrl": "https://github.com/justinholtweb/craft-donky/blob/main/README.md",
         "changelogUrl": "https://raw.githubusercontent.com/justinholtweb/craft-donky/main/CHANGELOG.md",
         "class": "justinholtweb\\donky\\Plugin"
+    },
+    "scripts": {
+        "phpstan": "phpstan --memory-limit=1G",
+        "check-cs": "ecs check --ansi",
+        "fix-cs": "ecs check --ansi --fix"
     }
 }

@@ -193,7 +193,7 @@ class DocumentType extends Model
     public function getIssueTriggerLabel(): string
     {
         if ($this->issueTrigger === self::TRIGGER_STATUS) {
-            return Craft::t('donky', 'Status: {name}', ['name' => $this->getIssueStatus()?->name ?? '—']);
+            return Craft::t('donky', 'Status: {name}', ['name' => $this->getIssueStatus()->name ?? '—']);
         }
 
         return self::issueTriggers()[$this->issueTrigger] ?? $this->issueTrigger;

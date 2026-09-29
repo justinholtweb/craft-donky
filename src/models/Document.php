@@ -160,7 +160,7 @@ class Document extends Model
 
     public function getLabel(): string
     {
-        return $this->formattedNumber ?: ($this->getType()?->name ?? Kind::label($this->kind));
+        return $this->formattedNumber ?: ($this->getType()->name ?? Kind::label($this->kind));
     }
 
     public function getKindLabel(): string
@@ -241,7 +241,7 @@ class Document extends Model
             'uid' => $this->uid,
             'kind' => $this->kind,
             'number' => $this->formattedNumber,
-            'order' => $this->getOrder()?->reference ?? $this->getOrder()?->getShortNumber(),
+            'order' => $this->getOrder()->reference ?? $this->getOrder()?->getShortNumber(),
             'status' => $this->status,
             'total' => $this->total,
             'currency' => $this->currency,

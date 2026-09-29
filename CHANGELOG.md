@@ -1,5 +1,21 @@
 # Release Notes for Donky
 
+## Unreleased
+
+### Security
+
+- **A document type's filename format could read any secret on the site.** It was unrestricted Twig with the order and Craft in reach, so anyone who could manage document types could put `{{ craft.app.config.db.password }}` in it and read it back in every download's filename. Filename formats now run in Craft's sandbox and see plain values — `number`, `date`, `document.formattedNumber`, `type.handle`, `order.number`, `order.shortNumber`, `order.reference` and the like. The default format and ordinary formats keep working; filenames are capped at 150 characters. Requires Craft 5.9.
+- **A design's custom CSS could run script in an admin's session.** It was inlined into previews served from the control panel, so `</style><script>` in it executed there. Custom CSS containing `<` is now refused, any already stored is neutralised when rendering, and previews are served with a Content-Security-Policy that allows no script.
+
+### Fixes
+
+- `donky/documents/render` printed an empty document number in its "not found" message.
+
+### Changed
+
+- Requires Craft CMS 5.9 or later.
+- PHPStan and ECS configuration.
+
 ## 5.0.0
 
 Initial release.
