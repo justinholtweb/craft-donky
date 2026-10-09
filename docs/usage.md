@@ -16,7 +16,7 @@ Everything else that issues a document goes through the same path:
 - a document type's trigger, when the order completes, is paid, or reaches a status
 - an attachment rule, as an email goes out
 - a bulk print, for the orders that do not have one yet
-- `donky/documents/issue` and `donky/documents/backfill` on the console
+- `donky/documents/issue`, `donky/documents/print` and `donky/documents/backfill` on the console
 
 Asking twice never issues twice: every automatic path calls `ensure()`, which returns the existing
 document if there is one.
@@ -32,6 +32,11 @@ CSV export.
   honest way to correct an invoice that has already left the building.
 - **Delete** removes the row. The number stays spent.
 
+Each has a console twin taking the formatted number — `donky/documents/void`, `restore`, `reissue`
+and `delete`, each with `--dry-run` — and the CSV export is `donky/documents/export` (Pro). A
+reissue issues the fresh document *before* voiding the old one, so a reissue that fails leaves the
+order with the document it had.
+
 ## Bulk printing
 
 On the Commerce order index, select some orders and choose a document from the actions menu.
@@ -40,6 +45,16 @@ and the PDF opens in a new tab.
 
 Donky issues whatever is missing first, so "print packing slips for today's orders" is one gesture.
 An order that fails is skipped and logged rather than losing the other ninety-nine.
+
+The same print from the console, for a cron job or a warehouse script:
+
+```sh
+php craft donky/documents/print --type=packingSlip --orders=ORD-1042,ORD-1043 --out=/tmp/slips.pdf
+php craft donky/documents/print --type=packingSlip --order-ids=12,13 --dry-run
+```
+
+`--issue-missing=0` prints only what is already issued. The command exits non-zero if any order
+had to be skipped.
 
 ## Customer downloads
 

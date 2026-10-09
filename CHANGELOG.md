@@ -1,5 +1,20 @@
 # Release Notes for Donky
 
+## Unreleased
+
+### Added
+
+- Console equivalents for every bulk and maintenance action in the control panel, each going through the same service method as the CP: `donky/documents/print` (the order index's bulk print, Pro), `void`, `restore`, `reissue`, `delete` and `export` (the ledger CSV, Pro). Anything that spends a number or removes a row takes `--dry-run`, and every command exits non-zero when it fails.
+- `donky/documents/set-next-number`, the console door to a type's counter. It moves a counter forward; moving one backwards needs `--force`.
+
+### Changed
+
+- Reissuing now issues the fresh document before voiding the old one, so a reissue that fails leaves the order with the document it had instead of none.
+
+### Fixed
+
+- The ledger's CSV export was available on Lite, though it is a Pro feature. The *Export CSV* button now only shows on Pro, and the export refuses on Lite.
+
 ## 5.1.0 - 2026-09-30
 
 ### Security

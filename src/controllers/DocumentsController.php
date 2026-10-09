@@ -5,9 +5,11 @@ namespace justinholtweb\donky\controllers;
 use Craft;
 use craft\commerce\elements\Order;
 use craft\web\Controller;
+use justinholtweb\donky\errors\DocumentException;
 use justinholtweb\donky\helpers\Kind;
 use justinholtweb\donky\models\Document;
 use justinholtweb\donky\Plugin;
+use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
@@ -108,18 +110,10 @@ class DocumentsController extends Controller
         $this->requirePostRequest();
         $this->requirePermission('donky-issueDocuments');
 
-        $plugin = Plugin::getInstance();
         $document = $this->_document((int)$this->request->getRequiredBodyParam('id'));
-        $type = $document->getType();
-        $order = $document->getOrder();
-
-        if (!$type || !$order) {
-            return $this->asFailure(Craft::t('donky', 'That document cannot be reissued.'));
-        }
 
         try {
-            $plugin->getDocuments()->voidDocument($document, Craft::t('donky', 'Superseded by a reissue.'));
-            $fresh = $plugin->getDocuments()->issue($type, $order, ['source' => Document::SOURCE_MANUAL]);
+            $fresh = Plugin::getInstance()->getDocuments()->reissue($document, Document::SOURCE_MANUAL);
         } catch (\Throwable $e) {
             return $this->asFailure($e->getMessage());
         }
@@ -217,7 +211,7 @@ class DocumentsController extends Controller
     }
 
     /**
-     * The ledger as CSV — the thing an accountant actually asks for.
+     * The ledger as CSV. Pro, like `donky/documents/export` on the console.
      */
     public function actionExport(): Response
     {
@@ -227,30 +221,11 @@ class DocumentsController extends Controller
             'status' => $this->request->getQueryParam('status') ?: null,
         ];
 
-        $documents = Plugin::getInstance()->getDocuments()->find($criteria);
-        $handle = fopen('php://temp', 'r+');
-
-        fputcsv($handle, ['Number', 'Kind', 'Type', 'Order', 'Status', 'Issued', 'Due', 'Currency', 'Total']);
-
-        foreach ($documents as $document) {
-            $order = $document->getOrder();
-
-            fputcsv($handle, [
-                $document->formattedNumber,
-                $document->getKindLabel(),
-                $document->getType()?->name,
-                $order?->reference ?: $order?->getShortNumber(),
-                $document->getStatusLabel(),
-                $document->dateIssued?->format('Y-m-d H:i'),
-                $document->dateDue?->format('Y-m-d'),
-                $document->currency,
-                $document->total,
-            ]);
+        try {
+            $csv = Plugin::getInstance()->getDocuments()->exportCsv($criteria);
+        } catch (DocumentException $e) {
+            throw new ForbiddenHttpException($e->getMessage());
         }
-
-        rewind($handle);
-        $csv = (string)stream_get_contents($handle);
-        fclose($handle);
 
         return $this->response->sendContentAsFile($csv, 'donky-documents-' . date('Ymd-Hi') . '.csv', [
             'mimeType' => 'text/csv',

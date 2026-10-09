@@ -956,6 +956,270 @@ try {
         return substr_count(strtolower($html), '</style>') === 1 && !str_contains($html, '<script>') ?: 'breakout in rendered HTML';
     });
 
+    section('Console (CP bulk and maintenance actions)');
+
+    /**
+     * Run a console command in this process, where the edition is Pro in memory.
+     */
+    $run = static function(string $route, array $params = []): int {
+        return (int)Craft::$app->runAction('donky/documents/' . $route, $params);
+    };
+
+    /**
+     * Run a real `php craft` in a child process. The child reads the harness's stored edition,
+     * so only edition-independent commands go through here.
+     *
+     * @return array{0: int, 1: string}
+     */
+    $craft = static function(string $args): array {
+        $output = [];
+        $code = 0;
+        exec(PHP_BINARY . ' ' . escapeshellarg(getcwd() . '/craft') . ' ' . $args . ' 2>&1', $output, $code);
+
+        return [$code, implode("\n", $output)];
+    };
+
+    $statusOf = static function(int $id): ?string {
+        $status = (new Query())->select('status')->from(Table::DOCUMENTS)->where(['id' => $id])->scalar();
+
+        return $status === false ? null : $status;
+    };
+
+    $cliType = makeType('cli', ['kind' => Kind::PACKING_SLIP]);
+    $cliOrderA = makeOrder($variant);
+    $cliOrderB = makeOrder($variant);
+    $cliExisting = $documents->issue($cliType, $cliOrderA);
+
+    check('print --dry-run reports the plan and issues nothing', function() use ($run, $cliType, $cliOrderA, $cliOrderB) {
+        $before = documentCount($cliType->id);
+        $code = $run('print', ['type' => $cliType->handle, 'orderIds' => "{$cliOrderA->id},{$cliOrderB->id}", 'dryRun' => true]);
+
+        return ($code === 0 && documentCount($cliType->id) === $before) ?: "exit $code, count " . documentCount($cliType->id);
+    });
+
+    check('print renders one PDF and issues only what is missing, like the order index', function() use ($run, $cliType, $cliOrderA, $cliOrderB) {
+        $before = documentCount($cliType->id);
+        $out = sys_get_temp_dir() . '/donky-cli-print-' . getmypid() . '.pdf';
+        $code = $run('print', ['type' => $cliType->handle, 'orders' => "{$cliOrderA->number},{$cliOrderB->number}", 'out' => $out]);
+        $pdf = @file_get_contents($out) ?: '';
+        @unlink($out);
+
+        return ($code === 0 && str_starts_with($pdf, '%PDF') && documentCount($cliType->id) === $before + 1)
+            ?: "exit $code, pdf " . strlen($pdf) . ' bytes, count ' . (documentCount($cliType->id) - $before);
+    });
+
+    check('print --issue-missing=0 issues nothing', function() use ($run, $cliType, $variant) {
+        $fresh = makeOrder($variant);
+        $before = documentCount($cliType->id);
+        $out = sys_get_temp_dir() . '/donky-cli-noissue-' . getmypid() . '.pdf';
+        $code = $run('print', ['type' => $cliType->handle, 'orderIds' => (string)$fresh->id, 'issueMissing' => false, 'out' => $out]);
+        @unlink($out);
+
+        // Nothing to print at all is a failure, and nothing was issued.
+        return ($code !== 0 && documentCount($cliType->id) === $before) ?: "exit $code";
+    });
+
+    check('print with an unknown order fails and issues nothing', function() use ($run, $cliType) {
+        $before = documentCount($cliType->id);
+        $code = $run('print', ['type' => $cliType->handle, 'orders' => 'no-such-order-' . getmypid()]);
+
+        return ($code !== 0 && documentCount($cliType->id) === $before) ?: "exit $code";
+    });
+
+    check('print without orders is a usage error', function() use ($run, $cliType) {
+        $code = $run('print', ['type' => $cliType->handle]);
+
+        return $code === \yii\console\ExitCode::USAGE ?: "exit $code";
+    });
+
+    check('void --dry-run changes nothing', function() use ($run, $cliExisting, $statusOf) {
+        $code = $run('void', [$cliExisting->formattedNumber, 'dryRun' => true]);
+
+        return ($code === 0 && $statusOf($cliExisting->id) === Document::STATUS_ISSUED) ?: "exit $code, " . $statusOf($cliExisting->id);
+    });
+
+    check('void voids through the same service method and records the reason', function() use ($run, $cliExisting, $documents) {
+        $code = $run('void', [$cliExisting->formattedNumber, 'reason' => 'CLI check']);
+        $document = $documents->getDocumentById($cliExisting->id);
+
+        return ($code === 0 && $document->status === Document::STATUS_VOID && str_contains((string)$document->notes, 'CLI check'))
+            ?: "exit $code, status {$document->status}";
+    });
+
+    check('voiding a void document again is a no-op, not an error', function() use ($run, $cliExisting) {
+        return $run('void', [$cliExisting->formattedNumber]) === 0 ?: 'non-zero exit';
+    });
+
+    check('restore brings it back', function() use ($run, $cliExisting, $statusOf) {
+        $code = $run('restore', [$cliExisting->formattedNumber]);
+
+        return ($code === 0 && $statusOf($cliExisting->id) === Document::STATUS_ISSUED) ?: "exit $code, " . $statusOf($cliExisting->id);
+    });
+
+    check('reissue --dry-run spends nothing', function() use ($run, $cliExisting, $cliType, $statusOf) {
+        $before = documentCount($cliType->id);
+        $code = $run('reissue', [$cliExisting->formattedNumber, 'dryRun' => true]);
+
+        return ($code === 0 && documentCount($cliType->id) === $before && $statusOf($cliExisting->id) === Document::STATUS_ISSUED) ?: "exit $code";
+    });
+
+    check('reissue issues a fresh one with the next number and voids the old one', function() use ($run, $cliExisting, $cliType, $cliOrderA, $documents, $numbers, $statusOf) {
+        $expected = $numbers->preview($cliType);
+        $code = $run('reissue', [$cliExisting->formattedNumber]);
+        $current = $documents->getDocumentForOrder($cliType, $cliOrderA);
+
+        return ($code === 0
+            && $statusOf($cliExisting->id) === Document::STATUS_VOID
+            && $current !== null
+            && $current->id !== $cliExisting->id
+            && $current->formattedNumber === $expected
+            && $current->source === Document::SOURCE_CONSOLE)
+            ?: "exit $code, current " . ($current?->formattedNumber ?? 'none') . ", expected $expected";
+    });
+
+    check('a reissue that cannot issue leaves the old document alone', function() use ($documents, $cliType, $cliOrderB) {
+        $document = $documents->getDocumentForOrder($cliType, $cliOrderB);
+        $handler = static function($event) {
+            $event->isValid = false;
+        };
+        \yii\base\Event::on(\justinholtweb\donky\services\Documents::class, \justinholtweb\donky\services\Documents::EVENT_BEFORE_ISSUE_DOCUMENT, $handler);
+
+        try {
+            $documents->reissue($document);
+
+            return 'reissue went through with issuing cancelled';
+        } catch (DocumentException) {
+            return $documents->getDocumentById($document->id)->status === Document::STATUS_ISSUED ?: 'the old document was voided anyway';
+        } finally {
+            \yii\base\Event::off(\justinholtweb\donky\services\Documents::class, \justinholtweb\donky\services\Documents::EVENT_BEFORE_ISSUE_DOCUMENT, $handler);
+        }
+    });
+
+    check('delete --dry-run keeps the row; delete --interactive=0 removes it and the number stays spent', function() use ($run, $cliType, $cliOrderB, $documents, $numbers) {
+        $document = $documents->getDocumentForOrder($cliType, $cliOrderB);
+        $dry = $run('delete', [$document->formattedNumber, 'dryRun' => true]);
+
+        if ($dry !== 0 || $documents->getDocumentById($document->id) === null) {
+            return "dry run exit $dry or the row went";
+        }
+
+        $code = $run('delete', [$document->formattedNumber, 'interactive' => false]);
+        $next = $numbers->preview($cliType);
+
+        return ($code === 0 && $documents->getDocumentById($document->id) === null && $next !== $document->formattedNumber)
+            ?: "exit $code, next $next";
+    });
+
+    check('an unknown document number exits non-zero', function() use ($run) {
+        return $run('void', ['NO-SUCH-' . getmypid()]) !== 0 ?: 'exit 0';
+    });
+
+    check('export writes the same CSV the Documents screen downloads', function() use ($run, $cliType, $cliExisting, $documents) {
+        $out = sys_get_temp_dir() . '/donky-cli-export-' . getmypid() . '.csv';
+        $code = $run('export', ['type' => $cliType->handle, 'out' => $out]);
+        $csv = @file_get_contents($out) ?: '';
+        @unlink($out);
+
+        return ($code === 0
+            && $csv === $documents->exportCsv(['typeId' => $cliType->id])
+            && str_starts_with($csv, 'Number,Kind')
+            && str_contains($csv, $cliExisting->formattedNumber))
+            ?: "exit $code, " . strlen($csv) . ' bytes';
+    });
+
+    check('export --status=void filters like the screen', function() use ($run, $cliType, $cliExisting) {
+        $out = sys_get_temp_dir() . '/donky-cli-export-void-' . getmypid() . '.csv';
+        $code = $run('export', ['type' => $cliType->handle, 'status' => 'void', 'out' => $out]);
+        $lines = array_filter(explode("\n", @file_get_contents($out) ?: ''));
+        @unlink($out);
+
+        return ($code === 0 && count($lines) === 2 && str_contains($lines[1], $cliExisting->formattedNumber))
+            ?: "exit $code, " . count($lines) . ' lines';
+    });
+
+    check('Lite refuses print and export on the console and the CSV export in the CP service', function() use ($run, $cliType, $cliOrderA, $documents) {
+        Craft::$app->getPlugins()->switchEdition('donky', Plugin::EDITION_LITE);
+
+        try {
+            $print = $run('print', ['type' => $cliType->handle, 'orderIds' => (string)$cliOrderA->id, 'dryRun' => true]);
+            $export = $run('export', ['out' => sys_get_temp_dir() . '/donky-cli-lite-' . getmypid() . '.csv']);
+
+            try {
+                $documents->exportCsv();
+                $service = 'exported';
+            } catch (DocumentException) {
+                $service = 'refused';
+            }
+
+            return ($print !== 0 && $export !== 0 && $service === 'refused') ?: "print $print, export $export, service $service";
+        } finally {
+            @unlink(sys_get_temp_dir() . '/donky-cli-lite-' . getmypid() . '.csv');
+            Craft::$app->getPlugins()->switchEdition('donky', Plugin::EDITION_PRO);
+        }
+    });
+
+    $counterType = makeType('clictr');
+
+    check('set-next-number moves a counter forward', function() use ($run, $counterType, $numbers) {
+        $code = $run('set-next-number', ['type' => $counterType->handle, 'next' => 50]);
+
+        return ($code === 0 && $numbers->getCounter($counterType, '', false)->nextNumber === 50) ?: "exit $code";
+    });
+
+    check('set-next-number refuses to rewind without --force', function() use ($run, $counterType, $numbers) {
+        $code = $run('set-next-number', ['type' => $counterType->handle, 'next' => 10]);
+
+        return ($code !== 0 && $numbers->getCounter($counterType, '', false)->nextNumber === 50) ?: "exit $code";
+    });
+
+    check('set-next-number --force --dry-run changes nothing', function() use ($run, $counterType, $numbers) {
+        $code = $run('set-next-number', ['type' => $counterType->handle, 'next' => 10, 'force' => true, 'dryRun' => true]);
+
+        return ($code === 0 && $numbers->getCounter($counterType, '', false)->nextNumber === 50) ?: "exit $code";
+    });
+
+    check('set-next-number --force rewinds through forceNextNumber()', function() use ($run, $counterType, $numbers) {
+        $code = $run('set-next-number', ['type' => $counterType->handle, 'next' => 10, 'force' => true, 'interactive' => false]);
+
+        return ($code === 0 && $numbers->getCounter($counterType, '', false)->nextNumber === 10) ?: "exit $code";
+    });
+
+    // A real `php craft` in a child process: kebab-case flags, exit codes, the stored edition.
+    $childDoc = $documents->issue($invoiceType, makeOrder($variant));
+
+    check('php craft: void --dry-run exits 0 and changes nothing', function() use ($craft, $childDoc, $statusOf) {
+        [$code, $out] = $craft('donky/documents/void ' . escapeshellarg($childDoc->formattedNumber) . ' --dry-run');
+
+        return ($code === 0 && str_contains($out, 'dry run') && $statusOf($childDoc->id) === Document::STATUS_ISSUED) ?: "exit $code: $out";
+    });
+
+    check('php craft: void and restore change the stored status', function() use ($craft, $childDoc, $statusOf) {
+        [$voidCode, $voidOut] = $craft('donky/documents/void ' . escapeshellarg($childDoc->formattedNumber) . ' --reason="child process"');
+        $afterVoid = $statusOf($childDoc->id);
+        [$restoreCode, $restoreOut] = $craft('donky/documents/restore ' . escapeshellarg($childDoc->formattedNumber));
+
+        return ($voidCode === 0 && $afterVoid === Document::STATUS_VOID && $restoreCode === 0 && $statusOf($childDoc->id) === Document::STATUS_ISSUED)
+            ?: "void $voidCode ($afterVoid): $voidOut / restore $restoreCode: $restoreOut";
+    });
+
+    check('php craft: an unknown document exits non-zero', function() use ($craft) {
+        [$code] = $craft('donky/documents/void NO-SUCH-DOC-' . getmypid());
+
+        return $code !== 0 ?: 'exit 0';
+    });
+
+    check('php craft: set-next-number rewind without --force exits non-zero', function() use ($craft, $counterType, $numbers) {
+        [$code, $out] = $craft('donky/documents/set-next-number --type=' . $counterType->handle . ' --next=1');
+
+        return ($code !== 0 && $numbers->getCounter($counterType, '', false)->nextNumber === 10) ?: "exit $code: $out";
+    });
+
+    check('php craft: delete --interactive=0 removes the document', function() use ($craft, $childDoc, $documents) {
+        [$code, $out] = $craft('donky/documents/delete ' . escapeshellarg($childDoc->formattedNumber) . ' --interactive=0');
+
+        return ($code === 0 && $documents->getDocumentById($childDoc->id) === null) ?: "exit $code: $out";
+    });
+
     section('Editions');
 
     check('Pro reports Pro', function() {

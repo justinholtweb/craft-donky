@@ -5,7 +5,9 @@
 {% set selectedSubnavItem = 'documents' %}
 
 {% block actionButton %}
-    <a class="btn" href="{{ url('donky/documents/export', criteria|filter(v => v is not null)) }}">{{ "Export CSV"|t('donky') }}</a>
+    {% if isPro %}
+        <a class="btn" href="{{ url('donky/documents/export', criteria|filter(v => v is not null)) }}">{{ "Export CSV"|t('donky') }}</a>
+    {% endif %}
 {% endblock %}
 
 {% block content %}

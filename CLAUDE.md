@@ -85,6 +85,25 @@ One `PrintDocuments` action per usable document type, registered on
 posts the selection to `donky/bulk/print` in a throwaway form, which is the only way an element
 action can hand the browser a file.
 
+### Console parity
+
+Every CP bulk or maintenance action has a command in `console\controllers\DocumentsController`,
+and both call the same service method — keep it that way when adding a CP action:
+
+| CP | Service | Console |
+|---|---|---|
+| order index *Print …* (`donky/bulk/print`) | `Bulk::print()` / `plan()` | `donky/documents/print` |
+| *Issue* on the order panel | `Documents::issue()` / `ensure()` | `donky/documents/issue` |
+| *Void* / *Restore* | `Documents::voidDocument()` / `restoreDocument()` | `void` / `restore` |
+| *Reissue* | `Documents::reissue()` | `reissue` |
+| *Delete* | `Documents::deleteDocumentById()` | `delete` |
+| *Export CSV* | `Documents::exportCsv()` (Pro gate lives here) | `export` |
+| — | `Numbers::setNextNumber()` / `forceNextNumber()` | `set-next-number` |
+| — | `Documents::issue()` | `backfill` |
+
+Destructive commands take `--dry-run`; failures exit non-zero. Credit notes stay CP-only: the
+per-line quantity form is the feature.
+
 ## Traps found while building this
 
 - **Craft's default element-action trigger id is the class name alone**
@@ -132,7 +151,7 @@ readable and reversible. `DocumentTypes::isLicensed()` is the single question.
 No local PHP on this Mac. Everything runs inside the plugin-testing container:
 
 ```sh
-docker exec -w /var/www/html ddev-plugin-testing-web php /var/www/craft-donky/tests/integration/checks.php   # 64 checks
+docker exec -w /var/www/html ddev-plugin-testing-web php /var/www/craft-donky/tests/integration/checks.php   # 95 checks
 docker exec ddev-plugin-testing-web bash -c 'find /var/www/craft-donky/src -name "*.php" -print0 | xargs -0 -n1 php -l'
 ```
 

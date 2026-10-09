@@ -273,6 +273,36 @@ class Documents extends Component
     }
 
     /**
+     * Reissue: issue a fresh document of the same type for the same order, then void this one, so
+     * the sequence keeps a record of both.
+     *
+     * The fresh one is issued first. If issuing fails, nothing has been voided and the order still
+     * has its current document; the other way round, a failure would leave it with none. It is not
+     * wrapped in a transaction because `Numbers::allocate()` must commit its counter while it still
+     * holds the type's mutex.
+     *
+     * @throws DocumentException
+     */
+    public function reissue(Document $document, string $source = Document::SOURCE_MANUAL): Document
+    {
+        $type = $document->getType();
+        $order = $document->getOrder();
+
+        if (!$type || !$order) {
+            throw new DocumentException(Craft::t('donky', 'That document cannot be reissued.'));
+        }
+
+        $fresh = $this->issue($type, $order, ['source' => $source]);
+
+        // Reissuing one that is void already just issues the fresh one.
+        if ($document->status !== Document::STATUS_VOID) {
+            $this->voidDocument($document, Craft::t('donky', 'Superseded by a reissue.'));
+        }
+
+        return $fresh;
+    }
+
+    /**
      * Really delete a document. The number is *not* returned to the counter — see `Numbers`.
      */
     public function deleteDocumentById(int $id): bool
@@ -318,6 +348,45 @@ class Documents extends Component
         }
 
         return $query->orderBy(['dateIssued' => SORT_DESC, 'id' => SORT_DESC]);
+    }
+
+    /**
+     * The ledger as CSV — the thing an accountant actually asks for. A Pro feature.
+     *
+     * @param array<string, mixed> $criteria As `findQuery()`.
+     * @throws DocumentException
+     */
+    public function exportCsv(array $criteria = []): string
+    {
+        if (!Plugin::getInstance()->isPro()) {
+            throw new DocumentException(Craft::t('donky', 'Exporting the ledger is a Donky Pro feature.'));
+        }
+
+        $handle = fopen('php://temp', 'r+');
+
+        fputcsv($handle, ['Number', 'Kind', 'Type', 'Order', 'Status', 'Issued', 'Due', 'Currency', 'Total']);
+
+        foreach ($this->find($criteria) as $document) {
+            $order = $document->getOrder();
+
+            fputcsv($handle, [
+                $document->formattedNumber,
+                $document->getKindLabel(),
+                $document->getType()?->name,
+                $order?->reference ?: $order?->getShortNumber(),
+                $document->getStatusLabel(),
+                $document->dateIssued?->format('Y-m-d H:i'),
+                $document->dateDue?->format('Y-m-d'),
+                $document->currency,
+                $document->total,
+            ]);
+        }
+
+        rewind($handle);
+        $csv = (string)stream_get_contents($handle);
+        fclose($handle);
+
+        return $csv;
     }
 
     /**

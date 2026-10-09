@@ -197,6 +197,24 @@ php craft donky/documents/backfill --type=invoice --dryRun         # Pro: what w
 php craft donky/documents/backfill --type=invoice --limit=500      # Pro: issue it
 ```
 
+Every bulk or maintenance action in the control panel has a console twin that goes through the same
+service method, so a script and a merchant can never disagree about what "void" means:
+
+| Control panel | Console |
+|---|---|
+| Order index → *Print …* / *Build …* (Pro) | `donky/documents/print --type=packingSlip --orders=ORD-1042,ORD-1043 [--order-ids=12,13] [--issue-missing=0] [--out=…] [--dry-run]` |
+| Document → *Void* | `donky/documents/void INV-2026-0142 [--reason="…"] [--dry-run]` |
+| Document → *Restore* | `donky/documents/restore INV-2026-0142 [--dry-run]` |
+| Document → *Reissue* | `donky/documents/reissue INV-2026-0142 [--dry-run]` |
+| Document → *Delete* | `donky/documents/delete INV-2026-0142 [--dry-run] [--interactive=0]` |
+| Documents → *Export CSV* (Pro) | `donky/documents/export [--type=invoice] [--kind=invoice] [--status=void] [--out=ledger.csv]` |
+| Order panel → *Issue* | `donky/documents/issue --type=invoice --order=ORD-1042` |
+| — | `donky/documents/set-next-number --type=invoice --next=1000 [--period=2026] [--force] [--dry-run]` |
+
+Anything that spends a number or removes a row takes `--dry-run`. Every command exits non-zero when
+it fails, including a bulk print that had to skip an order. `set-next-number` only moves a counter
+forward unless you pass `--force`, because a rewound counter can put one number on two documents.
+
 A backfill runs oldest order first and dates each document when the *order* happened, not when the
 backfill ran — otherwise a yearly sequence files last year's invoices under this year's numbers.
 
