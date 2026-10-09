@@ -1,7 +1,6 @@
 # Release Notes for Donky
 
-## Unreleased
-
+## 5.2.0 - 2026-10-09
 ### Added
 
 - Console equivalents for every bulk and maintenance action in the control panel, each going through the same service method as the CP: `donky/documents/print` (the order index's bulk print, Pro), `void`, `restore`, `reissue`, `delete` and `export` (the ledger CSV, Pro). Anything that spends a number or removes a row takes `--dry-run`, and every command exits non-zero when it fails.

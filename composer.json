@@ -1,7 +1,7 @@
 {
     "name": "justinholtweb/craft-donky",
     "description": "The document suite for Craft Commerce — template-driven invoices, packing slips, pick lists and credit notes, with sequential invoice numbers, bulk printing and per-status attachment rules.",
-    "version": "5.1.0",
+    "version": "5.2.0",
     "type": "craft-plugin",
     "keywords": [
         "craftcms",
